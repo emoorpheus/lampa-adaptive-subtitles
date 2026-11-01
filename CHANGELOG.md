@@ -1,0 +1,47 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [1.0.0] - 2026-11-01
+
+First public release.
+
+### Added
+
+- Subtitle profiles: HDR / Dolby Vision / HLG → dimmed subtitles (brightness 48 % by default), SDR → unchanged Lampa style.
+- HDR detection by priority: manual choice → ffprobe data (TorrServer `/ffp` or the torrent parser; HDR10, Dolby Vision, HLG) →
+  HLS `VIDEO-RANGE` → TorrServer torrent title → keywords in the file name (no false hits on "DVDRip" or "HDRezka").
+- Dimming by brightness (colours and ASS styling kept) or by recolouring to grey; optional separate levels for HDR10, Dolby Vision and HLG.
+- External SRT/VTT and ASS subtitles (Lampa's simple renderer and JASSUB).
+- LG webOS embedded subtitles: character opacity through `luna://com.webos.media` (`setSubtitleCharacterOpacity`), relative to the opacity chosen in Lampa.
+- HDR/SDR key in the player with memory per torrent or per show (at most 300 choices) and «Забыть ручные выборы HDR/SDR».
+- SDR colour and size of external subtitles; size of embedded subtitles on LG webOS.
+- Start notification with the chosen profile and its reason, and a second one only if a more exact check changes the profile.
+- For other plugins: the `adaptive_subs` Lampa event, the `adaptive_subs:profile` DOM event, `window.AdaptiveSubs`, and the shared
+  ffprobe cache `window.__lampa_ffp__` (v1, one `/ffp` request per file for all plugins).
+- Experimental options (off by default): take the display's dynamic range into account; log what webOS reports about the video.
+- Compatibility with old TV engines: ES5 + `Promise`, `filter` together with `-webkit-filter`.
+
+### Tested
+
+- Unit tests on Node.js 18 and 24; end-to-end tests in the Lampa 3.4.4 web build in Chromium.
+- Manual test by the maintainer on 2026-11-01 (internal build 4.0, same code as 1.0.0): **LG OLED65M59LA, webOS 25**
+  (Lampa web app served by Lampac) — subtitles dimmed in HDR and Dolby Vision video.
+
+### Known issues
+
+- Embedded subtitles on LG webOS have not been checked separately on a real TV.
+- Android TV and Samsung Tizen have not been reported yet.
+
+### Notes
+
+- Earlier non-public builds used the internal version number 4.0. The public version line starts at 1.0.0;
+  settings and manual HDR/SDR choices of those builds are kept (same storage keys).
+- Self-hosted by IP address: Lampa does not add its cache-busting parameter to such URLs, so add `?v=1.0.0` to the plugin URL.
+
+[Unreleased]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/emoorpheus/lampa-adaptive-subtitles/releases/tag/v1.0.0
