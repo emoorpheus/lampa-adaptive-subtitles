@@ -10,7 +10,7 @@
  * For those the plugin changes character opacity via luna://com.webos.media (setSubtitleCharacterOpacity), the same
  * method Lampa itself uses (src/interaction/player/video/webos/subtitles.js). The opacity chosen in Lampa is kept:
  * passed as is in SDR and dimmed proportionally in HDR.
- * The user interface is in Russian. ES5 + Promise, no dependencies.
+ * The interface follows the Lampa language: Russian or English (other languages use English). ES5 + Promise, no dependencies.
  */
 (function () {
     'use strict';

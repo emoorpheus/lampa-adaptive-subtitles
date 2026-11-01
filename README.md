@@ -7,15 +7,17 @@
 A plugin for the [Lampa](https://github.com/yumata/lampa) media center that **dims subtitles in HDR, Dolby Vision and HLG video**,
 so bright white text does not glare over dark scenes on OLED TVs. SDR video keeps Lampa's normal subtitles.
 
-> **Version 1.0.0.** Tested by the maintainer on an **LG OLED TV (webOS 25)** — see [Tested devices](#tested-devices).
-> Samsung Tizen and Android TV have not been reported yet. The plugin's interface is in **Russian**.
+> **Version 1.1.0-beta.1 — a pre-release for testing.** New: an **English interface** (the plugin follows the Lampa language).
+> This beta has been checked by automated tests only. The stable version is
+> [1.0.0](https://github.com/emoorpheus/lampa-adaptive-subtitles/releases/tag/v1.0.0), tested by the maintainer on an
+> **LG OLED TV (webOS 25)** — see [Tested devices](#tested-devices). Samsung Tizen and Android TV have not been reported yet.
 
 [Русская версия](README.ru.md)
 
 ## Contents
 
 [Overview](#overview) · [Features](#features) · [Architecture](#architecture) · [Tested devices](#tested-devices) ·
-[Installation](#installation) · [Settings](#settings) · [Privacy](#privacy) · [Known issues](#known-issues) ·
+[Installation](#installation) · [Settings](#settings) · [Language](#language) · [Privacy](#privacy) · [Known issues](#known-issues) ·
 [Troubleshooting](#troubleshooting) · [For plugin developers](#for-plugin-developers) · [Development](#development)
 
 ## Overview
@@ -25,7 +27,7 @@ When playback starts, the plugin decides whether the video is HDR and switches t
 - **HDR / Dolby Vision / HLG** → subtitles are dimmed with a brightness filter (48 % by default), so colours and ASS styling are kept;
 - **SDR** → subtitles stay exactly as Lampa draws them.
 
-A short notification tells which profile was chosen and why (for example «Субтитры: HDR — затемнённые, 48% (по названию)»).
+A short notification tells which profile was chosen and why (for example “Subtitles: HDR — dimmed, 48% (by name)”).
 If the detection is wrong, a remote key switches the profile and remembers your choice for the torrent or the show.
 
 ## Features
@@ -37,11 +39,12 @@ If the detection is wrong, a remote key switches the profile and remembers your 
 - **All subtitle types Lampa shows in HTML:** external SRT/VTT, ASS (Lampa's simple renderer and JASSUB).
 - **LG webOS embedded subtitles** (drawn by the TV, not by HTML): character opacity through `luna://com.webos.media`
   (`setSubtitleCharacterOpacity`) — the method Lampa itself uses; the opacity you chose in Lampa is kept in SDR and scaled down in HDR.
-- **HDR/SDR key** in the player (a color key of your choice) with memory per torrent or per show, and «Забыть ручные выборы HDR/SDR».
+- **HDR/SDR key** in the player (a color key of your choice) with memory per torrent or per show, and **Forget manual HDR/SDR choices**.
 - **SDR options:** colour and size of external subtitles (default: unchanged Lampa style).
 - **One ffprobe request per file** shared with other plugins (`window.__lampa_ffp__`), for example with [Skip Intro](https://github.com/emoorpheus/lampa-skip-intro).
 - **Event for other plugins** — Skip Intro uses it to dim its button in HDR.
 - **Experimental (off by default):** take the display's dynamic range into account; log what webOS reports about the video.
+- **Interface in Russian or English**, following the Lampa language ([Language](#language)).
 - **Old TVs:** plain ES5 + `Promise`, `filter` together with `-webkit-filter`, no dependencies, no third-party services.
 
 ## Architecture
@@ -64,7 +67,7 @@ flowchart LR
    setting, your remembered choice, the file name and the torrent parser's ffprobe data — so the first subtitles are already right.
 2. **Refinement.** Slower checks run in the background: ffprobe of the file through TorrServer `/ffp`, the TorrServer torrent title,
    `VIDEO-RANGE` in the HLS playlist. Each source has a priority; a weaker one never overrides a stronger one. The notification
-   appears when the checks finish or after 1.5 s; a second one («Субтитры уточнены: …») only if a later check switches HDR ↔ SDR.
+   appears when the checks finish or after 1.5 s; a second one (“Subtitles updated: …”) only if a later check switches HDR ↔ SDR.
 3. **Styling.** Dimming is a CSS `brightness()` filter on Lampa's subtitle elements, including ASS (Lampa's simple renderer and JASSUB),
    so colours and karaoke effects stay. WebVTT cues drawn by the browser itself (`::cue`) cannot be filtered and are recoloured to grey of the same brightness.
 4. **LG webOS.** Embedded subtitles are drawn by the TV's media pipeline, not by HTML. The plugin sets their character opacity through
@@ -73,8 +76,8 @@ flowchart LR
 
 ## Tested devices
 
-Manual test by the maintainer on 2026-11-01. The tested build was the internal 4.0; it has the same code as 1.0.0 — only the
-version string, the header comment and two hint texts in the settings differ.
+Manual test by the maintainer on 2026-11-01, **version 1.0.0**: the tested build was the internal 4.0 with the same code — only the
+version string, the header comment and two hint texts in the settings differ. **1.1.0-beta.1 has not been tested on a TV yet.**
 
 | Device | System and Lampa client | Result |
 |---|---|---|
@@ -86,30 +89,31 @@ Reports from other devices are welcome — Samsung Tizen, Android TV, older webO
 
 ### Prerequisites
 
-- **Lampa** with plugin support (Settings → Extensions / «Расширения»). Developed against the Lampa 3.4.4 web build.
-- An **HDR-capable TV** is the intended use. On an SDR screen choose «Режим → Всегда SDR» (or try the experimental display check).
+- **Lampa** with plugin support (Settings → Extensions). Developed against the Lampa 3.4.4 web build.
+- An **HDR-capable TV** is the intended use. On an SDR screen choose **Mode → Always SDR (normal)** (or try the experimental display check).
 - Optional: **TorrServer** with the `/ffp` (ffprobe) endpoint — exact HDR type for torrents even when the file name says nothing.
 
 ### Step by step
 
-1. In Lampa open **Настройки → Расширения** (Settings → Extensions).
-2. Select **«Добавить плагин»** (Add plugin) and enter the plugin URL:
+1. In Lampa open **Settings → Extensions** («Настройки → Расширения» in Russian).
+2. Select **Add Plugin** and enter the plugin URL:
 
    ```text
    https://emoorpheus.github.io/lampa-adaptive-subtitles/adaptive_subs.js
    ```
 
-   This address always serves the latest release. To pin an exact version, use jsDelivr instead:
+   This address always serves the latest **stable** release (pre-releases are never published there). To try this beta,
+   or to pin an exact version, use jsDelivr:
 
    ```text
-   https://cdn.jsdelivr.net/gh/emoorpheus/lampa-adaptive-subtitles@v1.0.0/dist/adaptive_subs.js
+   https://cdn.jsdelivr.net/gh/emoorpheus/lampa-adaptive-subtitles@v1.1.0-beta.1/dist/adaptive_subs.js
    ```
 
 3. Restart Lampa (close the app completely and open it again).
-4. Check that **Настройки** now has the section **«Адаптивные субтитры»** (Adaptive subtitles).
+4. Check that **Settings** now has the section **Adaptive Subtitles**.
 5. Play an HDR video with subtitles (for example a file whose name contains `HDR`): a notification such as
-   «Субтитры: HDR — затемнённые, 48% (по названию)» appears and the subtitles are dimmed.
-6. *(Optional)* In **Адаптивные субтитры → «Клавиша HDR/SDR в плеере»** choose a color key to fix a wrong detection with one press.
+   “Subtitles: HDR — dimmed, 48% (by name)” appears and the subtitles are dimmed.
+6. *(Optional)* In **Adaptive Subtitles → HDR/SDR key in the player** choose a color key to fix a wrong detection with one press.
 
 ### Self-hosting (Lampac or any web server)
 
@@ -118,7 +122,7 @@ Lampa adds its cache-busting `reset` parameter only to URLs **without** an IPv4 
 Put the version into the URL and change it with every update:
 
 ```text
-http://<YOUR_SERVER_IP>:<PORT>/plugins/adaptive_subs.js?v=1.0.0
+http://<YOUR_SERVER_IP>:<PORT>/plugins/adaptive_subs.js?v=1.1.0-beta.1
 ```
 
 > Do not use `raw.githubusercontent.com` links: GitHub serves them as `text/plain` with `X-Content-Type-Options: nosniff`,
@@ -126,26 +130,35 @@ http://<YOUR_SERVER_IP>:<PORT>/plugins/adaptive_subs.js?v=1.0.0
 
 ## Settings
 
-**Настройки → Адаптивные субтитры** (Settings → Adaptive subtitles):
+**Settings → Adaptive Subtitles** («Настройки → Адаптивные субтитры» in Russian):
 
 | Setting | Default | What it does |
 |---|---|---|
-| «Режим» (Mode) | auto | auto / always HDR (dimmed) / always SDR (normal) |
-| «Точно по файлу через TorrServer» (Exact via TorrServer) | on | ffprobe on TorrServer (`/ffp`): tells HDR10, Dolby Vision and HLG apart |
-| «По потоку HLS (онлайн)» (HLS stream) | on | Reads `VIDEO-RANGE` (SDR / HLG / PQ) from the m3u8 master playlist |
-| «Учитывать HDR экрана (эксперимент)» (Display HDR) | off | Does not dim if the browser reports that the screen is in SDR (`dynamic-range`) |
-| «HDR: способ» (HDR style) | dim | dim by brightness (colours kept) / recolour to grey |
-| «HDR: яркость субтитров» (HDR brightness) | 48 % | 60 / 54 / 48 / 40 / 33 % |
-| «HDR10 / Dolby Vision / HLG: яркость» | as the main level | Separate level when the HDR type is known |
-| «Затемнять субтитры ASS» (Dim ASS) | on | ASS styling (colours, karaoke) is kept |
-| «HDR: яркость встроенных субтитров (LG webOS)» | 50 % | Share of the opacity chosen in Lampa, for subtitles drawn by the TV |
-| «SDR: цвет внешних субтитров» (SDR colour) | unchanged | unchanged / white / soft white / warm yellow |
-| «Размер внешних субтитров» (Size) | unchanged | five sizes from 3.2vh to 5.8vh, the same in SDR and HDR |
-| «Размер встроенных субтитров (LG webOS)» | unchanged | 0 (smallest) … 4 (largest) |
-| «Клавиша HDR/SDR в плеере» (HDR/SDR key) | none | red / green / yellow / blue key; switches and remembers the profile |
-| «Уведомление при старте» (Start notification) | on | Which profile was chosen and why |
+| Mode | auto | auto / always HDR (dimmed) / always SDR (normal) |
+| Exact check via TorrServer | on | ffprobe on TorrServer (`/ffp`): tells HDR10, Dolby Vision and HLG apart |
+| By HLS stream (online) | on | Reads `VIDEO-RANGE` (SDR / HLG / PQ) from the m3u8 master playlist |
+| Respect the display HDR state (experimental) | off | Does not dim if the browser reports that the screen is in SDR (`dynamic-range`) |
+| HDR: method | dim | dim by brightness (colours kept) / recolour to grey |
+| HDR: subtitle brightness | 48 % | 60 / 54 / 48 / 40 / 33 % |
+| HDR10 / Dolby Vision / HLG: brightness | as the main level | Separate level when the HDR type is known |
+| Dim ASS subtitles | on | ASS styling (colours, karaoke) is kept |
+| HDR: built-in subtitle brightness (LG webOS) | 50 % | Share of the opacity chosen in Lampa, for subtitles drawn by the TV |
+| SDR: external subtitle colour | unchanged | unchanged / white / soft white / warm yellow |
+| External subtitle size | unchanged | five sizes from 3.2vh to 5.8vh, the same in SDR and HDR |
+| Built-in subtitle size (LG webOS) | unchanged | 0 (smallest) … 4 (largest) |
+| HDR/SDR key in the player | none | red / green / yellow / blue key; switches and remembers the profile |
+| Notification on start | on | Which profile was chosen and why |
 
 The webOS-only settings appear only on an LG TV.
+
+## Language
+
+The plugin follows the Lampa interface language (**Settings → Interface → Interface language**): Russian when Lampa is in Russian,
+English for every other language — settings, values and notifications. Lampa restarts after you change the language, and the
+plugin's settings are built again in the new language. Without a saved language Lampa runs in Russian, and so does the plugin.
+
+All interface strings are in one table, [`src/05_i18n.js`](src/05_i18n.js). To add a language, add its code to `I18N_LANGS` and a
+translation to every string — see [CONTRIBUTING.md](CONTRIBUTING.md#translations). Log messages are always in English.
 
 ## Privacy
 
@@ -172,15 +185,15 @@ own server by IP address ([docs/self-hosting.md](docs/self-hosting.md)).
 
 ## Troubleshooting
 
-- **HDR video, but the subtitles are not dimmed** (notification «Субтитры: SDR — обычные (признаков HDR нет)»). The plugin found
+- **HDR video, but the subtitles are not dimmed** (notification “Subtitles: SDR — normal (no HDR signs)”). The plugin found
   no HDR sign: the file name and the torrent title say nothing, and there is no ffprobe data (TorrServer without `/ffp`) or no
   `VIDEO-RANGE` in the stream. Press the HDR/SDR key — the choice is remembered for this torrent or show — or set
-  «Режим → Всегда HDR». If the notification says «экран без HDR», turn off «Учитывать HDR экрана (эксперимент)».
-- **SDR video is dimmed** — usually its name contains an HDR word. Press the HDR/SDR key or set «Режим → Всегда SDR».
-  «Забыть ручные выборы HDR/SDR» returns all titles to automatic detection.
+  **Mode → Always HDR (dimmed)**. If the notification says “display not in HDR”, turn off **Respect the display HDR state (experimental)**.
+- **SDR video is dimmed** — usually its name contains an HDR word. Press the HDR/SDR key or set **Mode → Always SDR (normal)**.
+  **Forget manual HDR/SDR choices** returns all titles to automatic detection.
 - **LG webOS: embedded subtitles do not change.** They are drawn by the TV itself; the plugin only changes their opacity through
   the TV's media service. A report helps ([docs/tv-checklist.md](docs/tv-checklist.md)).
-- **Which version is loaded?** The console prints `AdaptiveSubs v1.0.0 initialized`, and `window.AdaptiveSubs.version` returns it.
+- **Which version is loaded?** The console prints `AdaptiveSubs v1.1.0-beta.1 initialized`, and `window.AdaptiveSubs.version` returns it.
   On Android: `adb logcat | grep -F AdaptiveSubs`. For a self-hosted copy see [docs/self-hosting.md](docs/self-hosting.md#updating-and-cache).
 
 ## For plugin developers

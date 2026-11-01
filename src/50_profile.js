@@ -1,10 +1,9 @@
 
     // ---------- Профиль: применение, уведомление, событие для других плагинов ----------
-    var SOURCE_NAMES = {
-        name: 'по названию', torrserver: 'по раздаче TorrServer', parser: 'по данным раздачи', ffprobe: 'по файлу',
-        hls: 'по потоку HLS', webos: 'по данным webOS', manual: 'вручную', override: 'ваш выбор',
-        display: 'экран без HDR', 'default': 'признаков HDR нет'
-    };
+    // Откуда профиль: name, torrserver, parser, ffprobe, hls, webos, manual, override, display, default (строки src_* в 05_i18n.js)
+    function sourceName(source) {
+        return source && I18n.has('src_' + source) ? tr('src_' + source) : '';
+    }
     // Чем выше, тем надёжнее; более слабый источник не перебивает уже найденное
     var PRIO = { 'default': 0, name: 1, torrserver: 2, webos: 3, hls: 4, parser: 5, ffprobe: 6, override: 8, manual: 9 };
 
@@ -50,9 +49,9 @@
     function announce(refined, extra) {
         if (!flag('adaptive_subs_notify')) return;
         var hdr = current.profile === 'hdr';
-        var text = (refined ? 'Субтитры уточнены: ' : 'Субтитры: ') +
-            (hdr ? (KIND_NAMES[current.kind] || 'HDR') + ' — затемнённые, ' + Math.round(current.brightness * 100) + '%' : 'SDR — обычные');
-        var why = extra || SOURCE_NAMES[current.source];
+        var state = hdr ? tr('state_hdr', { kind: KIND_NAMES[current.kind] || 'HDR', pct: Math.round(current.brightness * 100) }) : tr('state_sdr');
+        var text = tr(refined ? 'noty_refined' : 'noty_subs', { state: state });
+        var why = extra || sourceName(current.source);
         if (why) text += ' (' + why + ')';
         try { Lampa.Noty.show(text); } catch (e) { log(text); }
     }
@@ -206,7 +205,7 @@
         Resolver.active = null;
         if (key) setOverride(key, next);
         applyKind(next === 'hdr' ? (isHdrKind(current.detected) ? current.detected : 'hdr') : 'sdr', 'override');
-        announce(false, key ? 'запомнено для ' + (key.charAt(0) === 'h' ? 'раздачи' : 'сериала или фильма') : 'вручную');
+        announce(false, key ? tr(key.charAt(0) === 'h' ? 'why_release' : 'why_title') : tr('src_manual'));
         return next;
     }
 

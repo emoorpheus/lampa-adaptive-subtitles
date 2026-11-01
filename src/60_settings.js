@@ -7,7 +7,7 @@
 
         Lampa.SettingsApi.addComponent({
             component: C,
-            name: 'Адаптивные субтитры',
+            name: tr('plugin_title'),
             icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M6 13h5M13 13h5M6 16h8M16 16h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
         });
 
@@ -19,76 +19,75 @@
         function title(name, text) { add({ name: name, type: 'title' }, { name: text }); }
         function refresh() { applyKind(current.kind, current.source); }
         function reevaluate() { if (playerOpened()) evaluate(playdata(), true); else refresh(); }
-        var levels = { same: 'Как основной уровень' };
-        for (var t in TONE_NAMES) if (TONE_NAMES.hasOwnProperty(t)) levels[t] = TONE_NAMES[t];
+        var tones = toneNames(), levels = { same: tr('level_same') };
+        for (var t in tones) if (tones.hasOwnProperty(t)) levels[t] = tones[t];
 
-        title('adaptive_subs_t_detect', 'Определение HDR');
+        title('adaptive_subs_t_detect', tr('t_detect'));
         add({ name: 'adaptive_subs_mode', type: 'select', default: DEFAULTS.adaptive_subs_mode,
-            values: { auto: 'Авто (по файлу и релизу)', hdr: 'Всегда HDR (приглушённые)', sdr: 'Всегда SDR (обычные)' } },
-            { name: 'Режим', description: 'Авто: технические данные файла (ffprobe), поток HLS, затем слова HDR / DV / Dolby Vision / HDR10 / HLG в названии файла и раздачи' },
+            values: { auto: tr('mode_auto'), hdr: tr('mode_hdr'), sdr: tr('mode_sdr') } },
+            { name: tr('set_mode'), description: tr('set_mode_d') },
             { onChange: reevaluate });
         add({ name: 'adaptive_subs_ffp', type: 'trigger', default: true },
-            { name: 'Точно по файлу через TorrServer', description: 'ffprobe на TorrServer (/ffp): различает HDR10, Dolby Vision и HLG. Нужен TorrServer с ffprobe' });
+            { name: tr('set_ffp'), description: tr('set_ffp_d') });
         add({ name: 'adaptive_subs_hls', type: 'trigger', default: true },
-            { name: 'По потоку HLS (онлайн)', description: 'Признак VIDEO-RANGE (SDR / HLG / PQ) в плейлисте m3u8, если источник его указывает' });
+            { name: tr('set_hls'), description: tr('set_hls_d') });
         add({ name: 'adaptive_subs_display', type: 'trigger', default: false },
-            { name: 'Учитывать HDR экрана (эксперимент)', description: 'Если браузер сообщает, что экран сейчас без HDR (dynamic-range), не затемнять. На ТВ не проверено' });
+            { name: tr('set_display'), description: tr('set_display_d') });
         if (webos) {
             add({ name: 'adaptive_subs_webos_probe', type: 'trigger', default: false },
-                { name: 'Сведения webOS о видео (эксперимент)', description: 'Записывать в журнал, что телевизор сообщает о видео, и использовать явный признак HDR, если он есть. Не проверено' });
+                { name: tr('set_probe'), description: tr('set_probe_d') });
         }
 
-        title('adaptive_subs_t_look', 'Вид в HDR');
+        title('adaptive_subs_t_look', tr('t_look'));
         add({ name: 'adaptive_subs_hdr_style', type: 'select', default: DEFAULTS.adaptive_subs_hdr_style,
-            values: { dim: 'Затемнять (цвета сохраняются)', color: 'Перекрашивать в серый' } },
-            { name: 'HDR: способ', description: 'Затемнение яркостью оставляет цветные надписи цветными. Субтитры WebVTT, которые рисует сам браузер, всегда перекрашиваются' },
+            values: { dim: tr('style_dim'), color: tr('style_color') } },
+            { name: tr('set_style'), description: tr('set_style_d') },
             { onChange: refresh });
-        add({ name: 'adaptive_subs_hdr_tone', type: 'select', default: DEFAULTS.adaptive_subs_hdr_tone, values: TONE_NAMES },
-            { name: 'HDR: яркость субтитров', description: 'Основной уровень. В режиме «перекрашивать» — серый той же яркости' },
+        add({ name: 'adaptive_subs_hdr_tone', type: 'select', default: DEFAULTS.adaptive_subs_hdr_tone, values: tones },
+            { name: tr('set_tone'), description: tr('set_tone_d') },
             { onChange: refresh });
         add({ name: 'adaptive_subs_level_hdr10', type: 'select', default: 'same', values: levels },
-            { name: 'HDR10: яркость', description: 'Если тип HDR известен' }, { onChange: refresh });
+            { name: tr('set_hdr10'), description: tr('set_hdr10_d') }, { onChange: refresh });
         add({ name: 'adaptive_subs_level_dv', type: 'select', default: 'same', values: levels },
-            { name: 'Dolby Vision: яркость' }, { onChange: refresh });
+            { name: tr('set_dv') }, { onChange: refresh });
         add({ name: 'adaptive_subs_level_hlg', type: 'select', default: 'same', values: levels },
-            { name: 'HLG: яркость' }, { onChange: refresh });
+            { name: tr('set_hlg') }, { onChange: refresh });
         add({ name: 'adaptive_subs_ass', type: 'trigger', default: true },
-            { name: 'Затемнять субтитры ASS', description: 'Оформление ASS (цвета, караоке) сохраняется. Нагрузка на слабые ТВ не проверялась' },
+            { name: tr('set_ass'), description: tr('set_ass_d') },
             { onChange: refresh });
         if (webos) {
             add({ name: 'adaptive_subs_webos_opacity', type: 'select', default: DEFAULTS.adaptive_subs_webos_opacity,
-                values: { '191': '75% — чуть темнее', '153': '60% — серые', '128': '50% — тёмно-серые', '102': '40% — тёмные', '77': '30% — очень тёмные' } },
-                { name: 'HDR: яркость встроенных субтитров (LG webOS)', description: 'Для субтитров внутри MKV, которые рисует сам телевизор. Доля от яркости, выбранной в Lampa (кнопка 9). В SDR — как в Lampa' },
+                values: { '191': tr('op_191'), '153': tr('op_153'), '128': tr('op_128'), '102': tr('op_102'), '77': tr('op_77') } },
+                { name: tr('set_webos_op'), description: tr('set_webos_op_d') },
                 { onChange: function () { applyWebos(); } });
         }
 
-        title('adaptive_subs_t_sdr', 'SDR и размер');
+        title('adaptive_subs_t_sdr', tr('t_sdr'));
         add({ name: 'adaptive_subs_sdr_color', type: 'select', default: DEFAULTS.adaptive_subs_sdr_color,
-            values: { lampa: 'Не менять (как в Lampa)', '#ffffff': 'Белый', '#f0f0f0': 'Мягкий белый', '#fff4c2': 'Тёплый жёлтый' } },
-            { name: 'SDR: цвет внешних субтитров', description: 'По умолчанию стиль Lampa не меняется' },
+            values: { lampa: tr('keep_lampa'), '#ffffff': tr('color_white'), '#f0f0f0': tr('color_soft'), '#fff4c2': tr('color_warm') } },
+            { name: tr('set_color'), description: tr('set_color_d') },
             { onChange: refresh });
         add({ name: 'adaptive_subs_size', type: 'select', default: DEFAULTS.adaptive_subs_size,
-            values: { 'default': 'Не менять (как в Lampa)', '3.2vh': 'Очень маленький', '3.8vh': 'Маленький', '4.4vh': 'Средний', '5vh': 'Крупный', '5.8vh': 'Очень крупный' } },
-            { name: 'Размер внешних субтитров', description: 'Одинаковый для SDR и HDR' },
+            values: { 'default': tr('keep_lampa'), '3.2vh': tr('size_xs'), '3.8vh': tr('size_s'), '4.4vh': tr('size_m'), '5vh': tr('size_l'), '5.8vh': tr('size_xl') } },
+            { name: tr('set_size'), description: tr('set_size_d') },
             { onChange: refresh });
         if (webos) {
             add({ name: 'adaptive_subs_webos_size', type: 'select', default: DEFAULTS.adaptive_subs_webos_size,
-                values: { 'default': 'Не менять (красная кнопка пульта)', '0': '0 — самый маленький', '1': '1', '2': '2', '3': '3', '4': '4 — самый большой' } },
-                { name: 'Размер встроенных субтитров (LG webOS)' },
+                values: { 'default': tr('wsize_keep'), '0': tr('wsize_0'), '1': '1', '2': '2', '3': '3', '4': tr('wsize_4') } },
+                { name: tr('set_webos_size') },
                 { onChange: function () { applyWebos(); } });
         }
 
-        title('adaptive_subs_t_ctrl', 'Управление');
+        title('adaptive_subs_t_ctrl', tr('t_ctrl'));
         add({ name: 'adaptive_subs_key', type: 'select', default: DEFAULTS.adaptive_subs_key,
-            values: { none: 'Нет', red: 'Красная (403)', green: 'Зелёная (404)', yellow: 'Жёлтая (405)', blue: 'Синяя (406)' } },
-            { name: 'Клавиша HDR/SDR в плеере', description: 'Переключает профиль, если плагин ошибся, и запоминает выбор для раздачи (или сериала). ' +
-                'На LG webOS цветные кнопки также управляют встроенными субтитрами Lampa; не назначайте ту же клавишу, что в плагине «Пропуск заставок»' });
+            values: { none: tr('key_none'), red: tr('key_red'), green: tr('key_green'), yellow: tr('key_yellow'), blue: tr('key_blue') } },
+            { name: tr('set_key'), description: tr('set_key_d') });
         add({ name: 'adaptive_subs_forget', type: 'button' },
-            { name: 'Забыть ручные выборы HDR/SDR', description: 'Снова определять автоматически' },
+            { name: tr('set_forget'), description: tr('set_forget_d') },
             { onChange: function () {
                 try { Lampa.Storage.set(OVERRIDES, {}); } catch (e) {}
-                try { Lampa.Noty.show('Ручные выборы HDR/SDR забыты'); } catch (e) {}
+                try { Lampa.Noty.show(tr('noty_forgot')); } catch (e) {}
             } });
         add({ name: 'adaptive_subs_notify', type: 'trigger', default: true },
-            { name: 'Уведомление при старте', description: 'Какой профиль включился и почему; второе — только если точная проверка его сменила' });
+            { name: tr('set_notify'), description: tr('set_notify_d') });
     }

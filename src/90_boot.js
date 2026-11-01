@@ -48,7 +48,11 @@
             lampaOpacity: function () { return lampaOpacity; },
             onStart: onStart,
             onDestroy: onDestroy,
-            init: init
+            init: init,
+            I18n: I18n,
+            I18N: I18N,
+            I18N_LANGS: I18N_LANGS,
+            tr: tr
         }
     };
 

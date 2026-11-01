@@ -7,7 +7,7 @@ const fs = require('fs');
 const http = require('http');
 const path = require('path');
 
-const SCENARIOS = ['e2e_player', 'e2e_movie', 'e2e_torrent', 'e2e_settings'];
+const SCENARIOS = ['e2e_player', 'e2e_movie', 'e2e_torrent', 'e2e_settings', 'e2e_i18n'];
 const PORT = 8123;
 
 function alive() {

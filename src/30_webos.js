@@ -101,7 +101,7 @@
                                 var r = result && result.sourceInfo ? inspectWebos(result) : null;
                                 if (r && !probeLogged[media]) {
                                     probeLogged[media] = true;
-                                    log('webOS sourceInfo video:', JSON.stringify(r.video), '->', r.kind || 'нет известного признака');
+                                    log('webOS sourceInfo video:', JSON.stringify(r.video), '->', r.kind || 'no known HDR flag');
                                     if (r.kind && sess === session && Resolver.active) Resolver.active.offer(r.kind, 'webos');
                                 }
                             } catch (e) {}

@@ -2,13 +2,14 @@
     // ---------- Уровни яркости ----------
     // Значения соответствуют прежним серым цветам v3: #9a -> 0.60, #8a -> 0.54, #7a -> 0.48, #66 -> 0.40, #55 -> 0.33
     var TONES = { '#9a9a9a': 0.60, '#8a8a8a': 0.54, '#7a7a7a': 0.48, '#666666': 0.40, '#555555': 0.33 };
-    var TONE_NAMES = {
-        '#9a9a9a': 'Светлее — 60%',
-        '#8a8a8a': 'Умеренно — 54%',
-        '#7a7a7a': 'Темнее — 48%',
-        '#666666': 'Тёмные — 40%',
-        '#555555': 'Очень тёмные — 33%'
-    };
+    var TONE_KEYS = ['#9a9a9a', '#8a8a8a', '#7a7a7a', '#666666', '#555555'];
+
+    // Подписи уровней на языке Lampa: { '#7a7a7a': 'Темнее — 48%', ... } (строки tone_* в 05_i18n.js)
+    function toneNames() {
+        var out = {};
+        for (var i = 0; i < TONE_KEYS.length; i++) out[TONE_KEYS[i]] = tr('tone_' + TONE_KEYS[i].slice(1));
+        return out;
+    }
     var KIND_NAMES = { dv: 'Dolby Vision', hdr10: 'HDR10', hlg: 'HLG', hdr: 'HDR', sdr: 'SDR' };
 
     function mainLevel() {

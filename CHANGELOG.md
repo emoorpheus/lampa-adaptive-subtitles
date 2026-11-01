@@ -6,6 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0-beta.1] - 2026-11-01
+
+Pre-release for testing: an English interface. Not tested on a TV yet.
+
+### Added
+
+- English interface. The plugin follows the Lampa language (Settings → Interface → Interface language): Russian for Russian,
+  English for every other language — settings, values and notifications (for example “Subtitles: HDR — dimmed, 48% (by name)”).
+  All interface strings are in one table, `src/05_i18n.js` (88 strings).
+
+### Changed
+
+- Log messages are in English.
+- CI also runs on the `next` branch (pre-releases).
+
+### Tested
+
+- Unit tests on Node.js 18 and 24 (30 tests), end-to-end tests in the Lampa 3.4.4 web build in Chromium (28 checks), including the
+  English interface in a real Lampa set to English.
+- **Not tested on a TV.** Detection and dimming are unchanged since 1.0.0.
+
 ## [1.0.0] - 2026-11-01
 
 First public release.
@@ -43,5 +64,6 @@ First public release.
   settings and manual HDR/SDR choices of those builds are kept (same storage keys).
 - Self-hosted by IP address: Lampa does not add its cache-busting parameter to such URLs, so add `?v=1.0.0` to the plugin URL.
 
-[Unreleased]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.1.0-beta.1...HEAD
+[1.1.0-beta.1]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.0.0...v1.1.0-beta.1
 [1.0.0]: https://github.com/emoorpheus/lampa-adaptive-subtitles/releases/tag/v1.0.0

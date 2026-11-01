@@ -3,7 +3,7 @@
 // Без npm install: acorn лежит в tools/vendor.
 const { spawnSync } = require('child_process');
 const path = require('path');
-const SUITES = ['t_adaptive', 't_compat'];
+const SUITES = ['t_adaptive', 't_i18n', 't_compat'];
 let fail = 0;
 for (const t of SUITES) {
     const r = spawnSync(process.execPath, [path.join(__dirname, t + '.js')], { encoding: 'utf8', timeout: 180000, maxBuffer: 64 * 1024 * 1024 });

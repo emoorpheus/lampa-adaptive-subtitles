@@ -8,7 +8,9 @@ LG webOS 25 (README → Tested devices). See [docs/tv-checklist.md](docs/tv-chec
 
 - The plugin code must stay **ES5** (old TV browsers). `node build.js` rejects newer syntax, `tests/t_compat.js` rejects newer
   built-in APIs (except `Promise`, which Lampa provides) and CSS that old engines do not support.
-- The user interface is in Russian, like Lampa itself. Code comments and test names are in Russian too; English issues and pull requests are welcome.
+- The user interface is in Russian and English and follows the Lampa language: every user-visible string goes through `tr()`
+  and the table in `src/05_i18n.js` ([Translations](#translations)). Code comments and test names are in Russian; English issues and
+  pull requests are welcome.
 - No runtime dependencies and no external services. The plugin talks only to the user's TorrServer, the stream that is already
   playing and, on LG webOS, the TV's media service — please keep it that way.
 - Keep the public interface compatible: settings keys `adaptive_subs_*`, the `adaptive_subs` event, `window.AdaptiveSubs` and
@@ -37,6 +39,25 @@ CHROMIUM_PATH=/path/to/chromium npm run e2e   # or first: npx playwright install
 
 The scenarios (`e2e_player`, `e2e_movie`, `e2e_torrent`, `e2e_settings`) run the real Lampa web build on `127.0.0.1:8123`
 and mock every external request, including TorrServer. Run a single one with `node e2e/run_all.js e2e_player`.
+
+## Translations
+
+The plugin reads the Lampa language (`Lampa.Storage` key `language`): Russian for `ru`, English for every other language.
+All interface strings are in one table in `src/05_i18n.js`:
+
+```js
+set_mode: { ru: 'Режим', en: 'Mode' },
+noty_subs: { ru: 'Субтитры: {state}', en: 'Subtitles: {state}' },
+state_hdr: { ru: '{kind} — затемнённые, {pct}%', en: '{kind} — dimmed, {pct}%' },
+```
+
+- In code: `tr('set_mode')`, `tr('noty_subs', { state: tr('state_sdr') })` → «Субтитры: SDR — обычные» / “Subtitles: SDR — normal”.
+- Placeholders (`{state}`, `{kind}`, …) must be the same in every language. A missing translation falls back to English, then Russian.
+- **A new language:** add its code to `I18N_LANGS` and a translation to every string.
+- Lampa's own `Lampa.Lang` is not used for the plugin strings: for a missing key it falls back to Russian, not English.
+- Log messages (`AdaptiveSubs …`) stay in English and are not translated.
+- `tests/t_i18n.js` checks that every string has every language with the same placeholders, that every `tr()` key exists,
+  that no string in the table is unused, and that Cyrillic string literals appear only in the table.
 
 ## Release (maintainers)
 

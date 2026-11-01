@@ -34,7 +34,8 @@ curl -s "http://<YOUR_SERVER_IP>:<PORT>/plugins/adaptive_subs.js" | head -c 120
 
 ## 3. Add it to Lampa
 
-**Настройки → Расширения → «Добавить плагин»**: `http://<YOUR_SERVER_IP>:<PORT>/plugins/adaptive_subs.js?v=1.0.0`, then restart Lampa.
+**Settings → Extensions → Add Plugin** (in Russian: «Настройки → Расширения → Добавить плагин»):
+`http://<YOUR_SERVER_IP>:<PORT>/plugins/adaptive_subs.js?v=1.0.0`, then restart Lampa. Use the version you downloaded in `?v=`.
 
 Keep the version in the URL and change it with every update (`?v=1.0.1`, …): for URLs with an IP address Lampa does not add
 its own cache-busting parameter (see [Updating and cache](#updating-and-cache)).
