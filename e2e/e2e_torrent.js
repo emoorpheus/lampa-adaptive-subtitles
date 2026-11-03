@@ -14,7 +14,7 @@ function check(name, fn) { try { fn(); results.push('✓ ' + name); } catch (e) 
 (async () => {
     const tsLog = async () => (await (await fetch(BASE + 'ts/__log')).json());
     await tsLog();
-    const env = await open({ storage: { torrserver_url: BASE + 'ts' } });
+    const env = await open({ storage: { torrserver_url: BASE + 'ts', adaptive_subs_screen: 'hdr' } });   // экран: см. e2e_player
     global.__env = env;
     await tsLog();
     const state = () => env.ev(() => {

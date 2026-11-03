@@ -11,7 +11,9 @@
         Lampa.Player.listener.follow('start', onStart);
         Lampa.Player.listener.follow('destroy', onDestroy);
         bindKey();
-        log('v' + VERSION + ' initialized' + (webosOrigRequest ? ' | webOS' : ''));
+        var scr = screenInfo();
+        log('v' + VERSION + ' initialized' + (webosOrigRequest ? ' | webOS' : '') + ' | display: ' + (scr.range || 'unknown') +
+            ' | HDR decoder: ' + (scr.decoder === null ? 'unknown' : (scr.decoder ? 'yes' : 'no')) + (scr.blocks ? ' | HDR shown as SDR (' + scr.blocks + ')' : ''));
     }
 
     // Экспорт для других плагинов, отладки и тестов
@@ -26,6 +28,7 @@
             announce(false);
         },
         toggle: toggleProfile,
+        screen: screenInfo,
         webos: function () { return !!webosOrigRequest; },
         _test: {
             evaluate: evaluate,
@@ -36,6 +39,9 @@
             kindFromHls: kindFromHls,
             kindFromData: kindFromData,
             levelFor: levelFor,
+            screenBlocksHdr: screenBlocksHdr,
+            keyCodeOf: keyCodeOf,
+            resetScreen: function () { hdrDecoder = undefined; },
             toneFor: toneFor,
             overrideKey: overrideKey,
             describeData: describeData,

@@ -11,7 +11,8 @@ const results = [];
 function check(name, fn) { try { fn(); results.push('✓ ' + name); } catch (e) { results.push('✗ ' + name + ' — ' + e.message.split('\n')[0]); } }
 
 (async () => {
-    const env = await open();
+    // headless Chromium сообщает dynamic-range: standard — затемнение проверяем с «Экран: HDR-экран» (Авто — в e2e_screen)
+    const env = await open({ storage: { adaptive_subs_screen: 'hdr' } });
     global.__env = env;
     check('Lampa готова, плагин инициализирован (версия из package.json, в браузере — без «| webOS»)', () => {
         assert.ok(env.ready);

@@ -27,7 +27,9 @@
         src_webos: { ru: 'по данным webOS', en: 'by webOS data' },
         src_manual: { ru: 'вручную', en: 'manually' },
         src_override: { ru: 'ваш выбор', en: 'your choice' },
-        src_display: { ru: 'экран без HDR', en: 'display not in HDR' },
+        src_display: { ru: 'экран без HDR', en: 'display without HDR' },
+        src_player: { ru: 'плеер не воспроизводит HDR', en: 'the player cannot play HDR' },
+        src_screen: { ru: 'экран: только SDR', en: 'display: SDR only' },
         src_default: { ru: 'признаков HDR нет', en: 'no HDR signs' },
 
         // Уровни яркости в HDR
@@ -45,12 +47,15 @@
         mode_auto: { ru: 'Авто (по файлу и релизу)', en: 'Auto (by file and release)' },
         mode_hdr: { ru: 'Всегда HDR (приглушённые)', en: 'Always HDR (dimmed)' },
         mode_sdr: { ru: 'Всегда SDR (обычные)', en: 'Always SDR (normal)' },
+        set_screen: { ru: 'Экран', en: 'Display' },
+        set_screen_d: { ru: 'Затемнять нужно, только когда HDR действительно показывается. Авто: не затемнять, если браузер сообщает, что экран без HDR, или встроенный плеер не воспроизводит HDR-видео (например, Android-приставка со старым WebView). На LG webOS и Samsung Tizen в «Авто» решает видео', en: 'Dimming is needed only when HDR is actually shown. Auto: do not dim if the browser reports that the display has no HDR, or if the built-in player cannot play HDR video (for example, an Android box with an old WebView). On LG webOS and Samsung Tizen, in Auto the video decides' },
+        screen_auto: { ru: 'Авто', en: 'Auto' },
+        screen_hdr: { ru: 'HDR-экран: затемнять HDR', en: 'HDR display: dim for HDR' },
+        screen_sdr: { ru: 'Только SDR: не затемнять', en: 'SDR only: do not dim' },
         set_ffp: { ru: 'Точно по файлу через TorrServer', en: 'Exact check via TorrServer' },
         set_ffp_d: { ru: 'ffprobe на TorrServer (/ffp): различает HDR10, Dolby Vision и HLG. Нужен TorrServer с ffprobe', en: 'ffprobe on TorrServer (/ffp): tells HDR10, Dolby Vision and HLG apart. Requires TorrServer with ffprobe' },
         set_hls: { ru: 'По потоку HLS (онлайн)', en: 'By HLS stream (online)' },
         set_hls_d: { ru: 'Признак VIDEO-RANGE (SDR / HLG / PQ) в плейлисте m3u8, если источник его указывает', en: 'The VIDEO-RANGE attribute (SDR / HLG / PQ) in the m3u8 playlist, if the source provides it' },
-        set_display: { ru: 'Учитывать HDR экрана (эксперимент)', en: 'Respect the display HDR state (experimental)' },
-        set_display_d: { ru: 'Если браузер сообщает, что экран сейчас без HDR (dynamic-range), не затемнять. На ТВ не проверено', en: 'If the browser reports that the display is not in HDR right now (dynamic-range), do not dim. Not tested on TVs' },
         set_probe: { ru: 'Сведения webOS о видео (эксперимент)', en: 'webOS video info (experimental)' },
         set_probe_d: { ru: 'Записывать в журнал, что телевизор сообщает о видео, и использовать явный признак HDR, если он есть. Не проверено', en: 'Log what the TV reports about the video and use an explicit HDR flag if there is one. Not tested' },
 

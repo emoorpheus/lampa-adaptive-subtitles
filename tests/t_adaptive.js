@@ -42,6 +42,8 @@ function aenv(o) {
         window.__webosOrig = window.webOS.service.request;
     })()`);
     if (o.display) env.bridge.media = o.display;
+    if (o.codecs) env.bridge.codecs = o.codecs;
+    if (o.mse) env.bridge.mse = o.mse;
     if (o.pre) o.pre(env);                          // до загрузки плагина: например, чужая реализация window.__lampa_ffp__
     env.load('adaptive');
     return env;
@@ -359,19 +361,111 @@ test('событие для других плагинов: Lampa.Listener «adap
     assert.deepStrictEqual(got.pop(), { type: 'profile', profile: 'sdr', kind: 'sdr', brightness: 1, source: 'manual' });
 });
 
-test('экран без HDR (эксперимент): dynamic-range: standard — обычные субтитры; ручной выбор сильнее', async () => {
-    const env = aenv({ settings: { adaptive_subs_display: 'true' }, display: { '(dynamic-range: standard)': true } });
-    start(env, { title: 'Film.2160p.HDR.mkv', url: 'https://cdn.example/f.mp4' });
+// Как на Tanix TX9 (Android 11, WebView 84): dynamic-range браузер не знает, HEVC 10 бит и Dolby Vision не декодирует
+const TX9 = { platform: 'android', codecs: { 'video/mp4; codecs="avc1.640028"': 'probably' }, mse: { 'video/mp4; codecs="avc1.640028"': true } };
+const HEVC = { 'video/mp4; codecs="hvc1.2.4.L153.B0"': 'probably' };
+
+test('экран (Авто): dynamic-range: standard — HDR-видео с обычными субтитрами, причина в уведомлении и событии; ручной выбор сильнее; high — затемнение', async () => {
+    const env = aenv({ display: { '(dynamic-range: standard)': true } });
+    const got = [];
+    env.L.Listener.follow('adaptive_subs', (e) => got.push(J(e)));
+    start(env, { title: 'Film.2160p.DV.HDR.mkv', url: 'https://cdn.example/f.mp4' });
     await env.advance(2000);
     assert.strictEqual(env.A.state.profile, 'sdr');
-    assert.deepStrictEqual(env.noty(), ['Субтитры: SDR — обычные (экран без HDR)']);
+    assert.strictEqual(env.A.state.kind, 'dv');
+    assert.strictEqual(env.A.state.screen, 'display');
+    assert.ok(!env.css('adaptive-subs-style').includes('brightness'));
+    assert.deepStrictEqual(env.noty(), ['Субтитры: SDR — обычные (Dolby Vision по названию; экран без HDR)']);
+    assert.deepStrictEqual(got, [{ type: 'profile', profile: 'sdr', kind: 'dv', brightness: 1, source: 'name', screen: 'display' }]);
+    assert.strictEqual(J(env.A.screen()).blocks, 'display');
     env.A.set('hdr');
     assert.strictEqual(env.A.state.profile, 'hdr');
+    assert.strictEqual(env.A.state.screen, '');
     // экран с HDR — затемняем
-    const env2 = aenv({ settings: { adaptive_subs_display: 'true' }, display: { '(dynamic-range: high)': true, '(dynamic-range: standard)': true } });
+    const env2 = aenv({ display: { '(dynamic-range: high)': true, '(dynamic-range: standard)': true } });
     start(env2, { title: 'Film.2160p.HDR.mkv', url: 'https://cdn.example/f.mp4' });
     await env2.advance(2000);
     assert.strictEqual(env2.A.state.profile, 'hdr');
+    assert.deepStrictEqual(env2.noty(), ['Субтитры: HDR — затемнённые, 48% (по названию)']);
+});
+
+test('экран (Авто) как на Tanix TX9: dynamic-range неизвестен, плеер без HEVC 10 бит и Dolby Vision — HDR по названию и по файлу без затемнения; клавиша сильнее', async () => {
+    const env = aenv(Object.assign({ settings: Object.assign({ adaptive_subs_key: 'red' }, TS_SETTINGS) }, TX9));
+    assert.deepStrictEqual(J(env.A.screen()), { mode: 'auto', tv: false, range: null, decoder: false, blocks: 'player' });
+    start(env, { title: 'Movie.2024.2160p.WEB-DL.HDR10.mkv', url: 'https://cdn.example/m.mp4', card: { id: 27205, title: 'Inception' } });
+    await env.advance(2000);
+    assert.strictEqual(env.A.state.profile, 'sdr');
+    assert.strictEqual(env.A.state.screen, 'player');
+    assert.deepStrictEqual(env.noty(), ['Субтитры: SDR — обычные (HDR10 по названию; плеер не воспроизводит HDR)']);
+    // точная проверка по файлу (TorrServer /ffp) тоже не затемняет; уточнения в уведомлении нет — профиль тот же
+    env.T.destroy();
+    ffpRoute(env, [V.dvP8, V.audio], 3000);
+    start(env, { title: 'Show.S01E01.mkv', url: tsUrl('Show.S01E01.mkv'), torrent_hash: H });
+    await env.advance(5000);
+    assert.strictEqual(env.A.state.kind, 'dv');
+    assert.strictEqual(env.A.state.source, 'ffprobe');
+    assert.strictEqual(env.A.state.profile, 'sdr');
+    assert.strictEqual(env.noty().length, 2);
+    // красная кнопка с пульта TX9: keyCode 0, key «ColorF0Red» — ручной HDR, запомнен для раздачи
+    env.L.Controller._name = 'player';
+    assert.strictEqual(env.T.key(0, 'keydown', 'ColorF0Red'), true);
+    assert.strictEqual(env.A.state.profile, 'hdr');
+    assert.strictEqual(env.A.state.kind, 'dv');
+    assert.strictEqual(env.noty().pop(), 'Субтитры: Dolby Vision — затемнённые, 48% (запомнено для раздачи)');
+    assert.strictEqual(J(env.L.Storage.get('adaptive_subs_overrides'))['h:' + H].p, 'hdr');
+    // другая цветная кнопка не наша
+    assert.strictEqual(env.T.key(0, 'keydown', 'ColorF3Blue'), false);
+    assert.strictEqual(env.A._test.keyCodeOf(0, { key: 'ColorF2Yellow' }), 405);
+    assert.strictEqual(env.A._test.keyCodeOf('403', null), 403);
+    // плеер умеет HEVC 10 бит (через canPlayType или MediaSource) — решает видео
+    for (const o of [{ codecs: HEVC }, { mse: { 'video/mp4; codecs="dvh1.08.06"': true }, codecs: {} }]) {
+        const e2 = aenv(Object.assign({ platform: 'android' }, o));
+        start(e2, { title: 'Movie.2160p.HDR10.mkv', url: 'https://cdn.example/m.mp4' });
+        await e2.advance(2000);
+        assert.strictEqual(e2.A.state.profile, 'hdr', JSON.stringify(o));
+    }
+    // браузер о кодеках не сообщает (нет canPlayType и MediaSource) — решает видео
+    const e3 = aenv({ platform: 'android' });
+    assert.strictEqual(J(e3.A.screen()).decoder, null);
+    start(e3, { title: 'Movie.2160p.HDR10.mkv', url: 'https://cdn.example/m.mp4' });
+    await e3.advance(2000);
+    assert.strictEqual(e3.A.state.profile, 'hdr');
+});
+
+test('экран: «Только SDR» и «HDR-экран» из настроек; на LG webOS в «Авто» решает видео; смена настройки в плеере пересчитывает профиль', async () => {
+    const env = aenv(Object.assign({}, TX9));
+    const scr = env.L.SettingsApi.params.find((p) => p.param.name === 'adaptive_subs_screen');
+    assert.deepStrictEqual(Object.keys(scr.param.values), ['auto', 'hdr', 'sdr']);
+    assert.strictEqual(scr.param.default, 'auto');
+    start(env, { title: 'Movie.2160p.HDR.mkv', url: 'https://cdn.example/m.mp4' });
+    await env.advance(2000);
+    assert.strictEqual(env.A.state.profile, 'sdr');
+    env.setStorage('adaptive_subs_screen', 'hdr');
+    scr.onChange('hdr');
+    await env.advance(2000);
+    assert.strictEqual(env.A.state.profile, 'hdr');
+    assert.strictEqual(env.noty().pop(), 'Субтитры: HDR — затемнённые, 48% (по названию)');
+    env.setStorage('adaptive_subs_screen', 'sdr');
+    scr.onChange('sdr');
+    await env.advance(2000);
+    assert.strictEqual(env.A.state.profile, 'sdr');
+    assert.strictEqual(env.A.state.screen, 'screen');
+    assert.strictEqual(env.noty().pop(), 'Субтитры: SDR — обычные (HDR по названию; экран: только SDR)');
+    // режим «Всегда HDR» сильнее настройки экрана (это ручной выбор)
+    env.setStorage('adaptive_subs_mode', 'hdr');
+    env.L.SettingsApi.params.find((p) => p.param.name === 'adaptive_subs_mode').onChange('hdr');
+    assert.strictEqual(env.A.state.profile, 'hdr');
+    // LG webOS: dynamic-range: standard и нет HEVC в canPlayType — в «Авто» всё равно по видео
+    const w = aenv({ webos: true, display: { '(dynamic-range: standard)': true }, codecs: {} });
+    start(w, { title: 'Film.2160p.HDR.mkv', url: 'https://cdn.example/f.mp4' }, { mediaId: 'm1' });
+    await w.advance(2000);
+    assert.strictEqual(w.A.state.profile, 'hdr');
+    assert.strictEqual(J(w.A.screen()).blocks, '');
+    // Samsung Tizen — тоже
+    const t = aenv(Object.assign({}, TX9, { platform: 'tizen' }));
+    start(t, { title: 'Film.2160p.HDR.mkv', url: 'https://cdn.example/f.mp4' });
+    await t.advance(2000);
+    assert.strictEqual(t.A.state.profile, 'hdr');
 });
 
 // ---------------- LG webOS ----------------

@@ -8,7 +8,7 @@ const results = [];
 function check(name, fn) { try { fn(); results.push('✓ ' + name); } catch (e) { results.push('✗ ' + name + ' — ' + e.message.split('\n')[0]); } }
 
 (async () => {
-    const env = await open({ storage: { language: 'en' } });
+    const env = await open({ storage: { language: 'en', adaptive_subs_screen: 'hdr' } });   // экран: см. e2e_player
     global.__env = env;
     const lang = await env.ev(() => ({ next: Lampa.Lang.translate('settings_player_next_episode'), plugin: window.AdaptiveSubs._test.I18n.lang() }));
     check('Lampa на английском (Lampa.Lang: «Next episode»), плагин выбрал английский', () => {
@@ -44,7 +44,7 @@ function check(name, fn) { try { fn(); results.push('✓ ' + name); } catch (e) 
     }));
     console.log('adaptive_subs: ' + page.items.length + '\n  ' + page.items.join('\n  '));
     check('раздел на английском: пункты, значения и описания без кириллицы', () => {
-        for (const n of ['title=HDR detection', 'adaptive_subs_mode=Mode', 'adaptive_subs_hdr_tone=HDR: subtitle brightness', 'adaptive_subs_size=External subtitle size', 'adaptive_subs_forget=Forget manual HDR/SDR choices'])
+        for (const n of ['title=HDR detection', 'adaptive_subs_mode=Mode', 'adaptive_subs_screen=Display', 'adaptive_subs_hdr_tone=HDR: subtitle brightness', 'adaptive_subs_size=External subtitle size', 'adaptive_subs_forget=Forget manual HDR/SDR choices'])
             assert.ok(page.items.includes(n), n + ' нет в: ' + page.items.join(' | '));
         const m = page.text.match(/[^\s]*[\u0400-\u04FF][^\s]*/g);
         assert.ok(!m, 'кириллица: ' + (m || []).slice(0, 5).join(' '));

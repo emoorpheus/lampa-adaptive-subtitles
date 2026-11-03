@@ -25,7 +25,7 @@ function check(name, fn) { try { fn(); results.push('✓ ' + name); } catch (e) 
     const ad = await names('adaptive_subs');
     console.log('adaptive_subs: ' + ad.length + '\n  ' + ad.join('\n  '));
     check('раздел «Адаптивные субтитры»: без пунктов webOS в браузере', () => {
-        assert.ok(ad.includes('adaptive_subs_mode=Режим') && ad.includes('adaptive_subs_forget=Забыть ручные выборы HDR/SDR'), ad.join(' | '));
+        assert.ok(ad.includes('adaptive_subs_mode=Режим') && ad.includes('adaptive_subs_screen=Экран') && ad.includes('adaptive_subs_forget=Забыть ручные выборы HDR/SDR'), ad.join(' | '));
         assert.ok(!ad.some((n) => /webos/.test(n)), ad.join(' | '));
     });
     const sel = await env.ev(() => new Promise((res) => {

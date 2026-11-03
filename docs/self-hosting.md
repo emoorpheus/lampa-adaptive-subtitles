@@ -1,5 +1,7 @@
 # Self-hosting the plugin (home server, Lampac, any web server)
 
+[Russian version](self-hosting.ru.md)
+
 Use this if you want Lampa to load the plugin from your own server instead of GitHub Pages or jsDelivr.
 
 | Placeholder | Meaning |
@@ -11,7 +13,7 @@ Use this if you want Lampa to load the plugin from your own server instead of Gi
 ## 1. Download and verify
 
 ```sh
-VERSION=v1.0.0
+VERSION=v1.0.0                   # or a pre-release, for example v1.1.0-beta.2
 curl -fsSLO "https://cdn.jsdelivr.net/gh/emoorpheus/lampa-adaptive-subtitles@$VERSION/dist/adaptive_subs.js"
 curl -fsSLO "https://cdn.jsdelivr.net/gh/emoorpheus/lampa-adaptive-subtitles@$VERSION/dist/SHA256SUMS"
 sha256sum -c SHA256SUMS          # macOS: shasum -a 256 -c SHA256SUMS
@@ -34,7 +36,7 @@ curl -s "http://<YOUR_SERVER_IP>:<PORT>/plugins/adaptive_subs.js" | head -c 120
 
 ## 3. Add it to Lampa
 
-**Settings → Extensions → Add Plugin** (in Russian: «Настройки → Расширения → Добавить плагин»):
+**Settings → Extensions → Add Plugin**:
 `http://<YOUR_SERVER_IP>:<PORT>/plugins/adaptive_subs.js?v=1.0.0`, then restart Lampa. Use the version you downloaded in `?v=`.
 
 Keep the version in the URL and change it with every update (`?v=1.0.1`, …): for URLs with an IP address Lampa does not add
@@ -51,7 +53,7 @@ your Lampa (CUB) account, `email` — **only if the URL contains no IPv4 address
 is sent (your account e-mail stays on the device), but the device may keep using an old cached copy.
 
 The plugin settings do not show its version. Where a console is available (a desktop browser, developer tools of the TV),
-look for the line `AdaptiveSubs v1.0.0 initialized`. On a TV without a console, make sure the new file is loaded:
+look for the line `[AdaptiveSubs] v1.0.0 initialized`. On a TV without a console, make sure the new file is loaded:
 
 1. close Lampa completely and open it again;
 2. if you are not sure, change the plugin URL in the extension list to `…/plugins/adaptive_subs.js?v=<new version>`.

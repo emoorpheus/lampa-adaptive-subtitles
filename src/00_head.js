@@ -1,6 +1,8 @@
 /*!
  * Adaptive Subtitles for Lampa v@VERSION@ (MIT License)
  * HDR / Dolby Vision / HLG video -> subtitles are dimmed (no glare on OLED screens); SDR -> as in Lampa.
+ * Dimming is applied only when HDR can actually be shown: not on an SDR display (dynamic-range) and not in a built-in
+ * player that cannot play HDR video (for example, an Android box with an old WebView); "Display" setting.
  * Dimming uses brightness, so colours and styling are kept (external subtitles, ASS: Lampa's simple renderer and JASSUB).
  * HDR detection: file name, TorrServer torrent title, ffprobe data (from the torrent parser or TorrServer /ffp,
  * shared with other plugins through window.__lampa_ffp__), HLS VIDEO-RANGE. Manual HDR/SDR key in the player
@@ -24,7 +26,7 @@
     var NET_TIMEOUT = 4000;
     var FFP_TIMEOUT = 3e4;          // TorrServer запускает ffprobe по торренту: бывает долго
     var OVERRIDE_LIMIT = 300;
-    var current = { profile: 'sdr', kind: 'sdr', brightness: 1, source: '', key: '', detected: 'sdr' };
+    var current = { profile: 'sdr', kind: 'sdr', brightness: 1, source: '', key: '', detected: 'sdr', screen: '' };
     var lookupToken = 0;
     var session = 0;
     var torrCache = {};
@@ -45,7 +47,7 @@
         adaptive_subs_size: 'default',
         adaptive_subs_ffp: 'true',
         adaptive_subs_hls: 'true',
-        adaptive_subs_display: 'false',
+        adaptive_subs_screen: 'auto',
         adaptive_subs_webos_probe: 'false',
         adaptive_subs_key: 'none',
         adaptive_subs_notify: 'true'

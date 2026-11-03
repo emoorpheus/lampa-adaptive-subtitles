@@ -1,6 +1,6 @@
 {
   "name": "lampa-adaptive-subtitles",
-  "version": "1.1.0-beta.1",
+  "version": "1.1.0-beta.2",
   "private": true,
   "description": "Lampa plugin: dims subtitles for HDR / Dolby Vision / HLG video so they do not glare on OLED screens",
   "license": "MIT",

@@ -34,6 +34,7 @@ async function open(o) {
         window.sessionStorage.setItem('__seeded', '1');
         for (const k of Object.keys(s)) window.localStorage.setItem(k, s[k]);
     }, settings);
+    if (o.init) await ctx.addInitScript(o.init);     // до загрузки Lampa: например, браузер как на Android-приставке
     const page = await ctx.newPage();
     const logs = [];
     page.on('console', (m) => logs.push(m.type() + ': ' + m.text()));

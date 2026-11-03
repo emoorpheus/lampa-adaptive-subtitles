@@ -27,12 +27,14 @@
             values: { auto: tr('mode_auto'), hdr: tr('mode_hdr'), sdr: tr('mode_sdr') } },
             { name: tr('set_mode'), description: tr('set_mode_d') },
             { onChange: reevaluate });
+        add({ name: 'adaptive_subs_screen', type: 'select', default: DEFAULTS.adaptive_subs_screen,
+            values: { auto: tr('screen_auto'), hdr: tr('screen_hdr'), sdr: tr('screen_sdr') } },
+            { name: tr('set_screen'), description: tr('set_screen_d') },
+            { onChange: reevaluate });
         add({ name: 'adaptive_subs_ffp', type: 'trigger', default: true },
             { name: tr('set_ffp'), description: tr('set_ffp_d') });
         add({ name: 'adaptive_subs_hls', type: 'trigger', default: true },
             { name: tr('set_hls'), description: tr('set_hls_d') });
-        add({ name: 'adaptive_subs_display', type: 'trigger', default: false },
-            { name: tr('set_display'), description: tr('set_display_d') });
         if (webos) {
             add({ name: 'adaptive_subs_webos_probe', type: 'trigger', default: false },
                 { name: tr('set_probe'), description: tr('set_probe_d') });

@@ -7,7 +7,7 @@ const results = [];
 function check(name, fn) { try { fn(); results.push('✓ ' + name); } catch (e) { results.push('✗ ' + name + ' — ' + e.message.split('\n')[0]); } }
 
 (async () => {
-    const env = await open({ storage: { adaptive_subs_key: 'blue' } });
+    const env = await open({ storage: { adaptive_subs_key: 'blue', adaptive_subs_screen: 'hdr' } });   // экран: см. e2e_player
     global.__env = env;
     const press = (code) => env.ev((code) => {
         for (const type of ['keydown', 'keyup']) {

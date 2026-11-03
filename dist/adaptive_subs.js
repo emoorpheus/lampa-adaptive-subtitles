@@ -1,6 +1,8 @@
 /*!
- * Adaptive Subtitles for Lampa v1.1.0-beta.1 (MIT License)
+ * Adaptive Subtitles for Lampa v1.1.0-beta.2 (MIT License)
  * HDR / Dolby Vision / HLG video -> subtitles are dimmed (no glare on OLED screens); SDR -> as in Lampa.
+ * Dimming is applied only when HDR can actually be shown: not on an SDR display (dynamic-range) and not in a built-in
+ * player that cannot play HDR video (for example, an Android box with an old WebView); "Display" setting.
  * Dimming uses brightness, so colours and styling are kept (external subtitles, ASS: Lampa's simple renderer and JASSUB).
  * HDR detection: file name, TorrServer torrent title, ffprobe data (from the torrent parser or TorrServer /ffp,
  * shared with other plugins through window.__lampa_ffp__), HLS VIDEO-RANGE. Manual HDR/SDR key in the player
@@ -18,13 +20,13 @@
     if (window.adaptive_subs_plugin) return;
     window.adaptive_subs_plugin = true;
 
-    var VERSION = "1.1.0-beta.1";
+    var VERSION = "1.1.0-beta.2";
     var STYLE_ID = 'adaptive-subs-style';
     var QUICK_WAIT = 1500;          // мс: ждём быстрые источники (название раздачи, HLS) до первого уведомления
     var NET_TIMEOUT = 4000;
     var FFP_TIMEOUT = 3e4;          // TorrServer запускает ffprobe по торренту: бывает долго
     var OVERRIDE_LIMIT = 300;
-    var current = { profile: 'sdr', kind: 'sdr', brightness: 1, source: '', key: '', detected: 'sdr' };
+    var current = { profile: 'sdr', kind: 'sdr', brightness: 1, source: '', key: '', detected: 'sdr', screen: '' };
     var lookupToken = 0;
     var session = 0;
     var torrCache = {};
@@ -45,7 +47,7 @@
         adaptive_subs_size: 'default',
         adaptive_subs_ffp: 'true',
         adaptive_subs_hls: 'true',
-        adaptive_subs_display: 'false',
+        adaptive_subs_screen: 'auto',
         adaptive_subs_webos_probe: 'false',
         adaptive_subs_key: 'none',
         adaptive_subs_notify: 'true'
@@ -109,7 +111,9 @@
         src_webos: { ru: 'по данным webOS', en: 'by webOS data' },
         src_manual: { ru: 'вручную', en: 'manually' },
         src_override: { ru: 'ваш выбор', en: 'your choice' },
-        src_display: { ru: 'экран без HDR', en: 'display not in HDR' },
+        src_display: { ru: 'экран без HDR', en: 'display without HDR' },
+        src_player: { ru: 'плеер не воспроизводит HDR', en: 'the player cannot play HDR' },
+        src_screen: { ru: 'экран: только SDR', en: 'display: SDR only' },
         src_default: { ru: 'признаков HDR нет', en: 'no HDR signs' },
 
         // Уровни яркости в HDR
@@ -127,12 +131,15 @@
         mode_auto: { ru: 'Авто (по файлу и релизу)', en: 'Auto (by file and release)' },
         mode_hdr: { ru: 'Всегда HDR (приглушённые)', en: 'Always HDR (dimmed)' },
         mode_sdr: { ru: 'Всегда SDR (обычные)', en: 'Always SDR (normal)' },
+        set_screen: { ru: 'Экран', en: 'Display' },
+        set_screen_d: { ru: 'Затемнять нужно, только когда HDR действительно показывается. Авто: не затемнять, если браузер сообщает, что экран без HDR, или встроенный плеер не воспроизводит HDR-видео (например, Android-приставка со старым WebView). На LG webOS и Samsung Tizen в «Авто» решает видео', en: 'Dimming is needed only when HDR is actually shown. Auto: do not dim if the browser reports that the display has no HDR, or if the built-in player cannot play HDR video (for example, an Android box with an old WebView). On LG webOS and Samsung Tizen, in Auto the video decides' },
+        screen_auto: { ru: 'Авто', en: 'Auto' },
+        screen_hdr: { ru: 'HDR-экран: затемнять HDR', en: 'HDR display: dim for HDR' },
+        screen_sdr: { ru: 'Только SDR: не затемнять', en: 'SDR only: do not dim' },
         set_ffp: { ru: 'Точно по файлу через TorrServer', en: 'Exact check via TorrServer' },
         set_ffp_d: { ru: 'ffprobe на TorrServer (/ffp): различает HDR10, Dolby Vision и HLG. Нужен TorrServer с ffprobe', en: 'ffprobe on TorrServer (/ffp): tells HDR10, Dolby Vision and HLG apart. Requires TorrServer with ffprobe' },
         set_hls: { ru: 'По потоку HLS (онлайн)', en: 'By HLS stream (online)' },
         set_hls_d: { ru: 'Признак VIDEO-RANGE (SDR / HLG / PQ) в плейлисте m3u8, если источник его указывает', en: 'The VIDEO-RANGE attribute (SDR / HLG / PQ) in the m3u8 playlist, if the source provides it' },
-        set_display: { ru: 'Учитывать HDR экрана (эксперимент)', en: 'Respect the display HDR state (experimental)' },
-        set_display_d: { ru: 'Если браузер сообщает, что экран сейчас без HDR (dynamic-range), не затемнять. На ТВ не проверено', en: 'If the browser reports that the display is not in HDR right now (dynamic-range), do not dim. Not tested on TVs' },
         set_probe: { ru: 'Сведения webOS о видео (эксперимент)', en: 'webOS video info (experimental)' },
         set_probe_d: { ru: 'Записывать в журнал, что телевизор сообщает о видео, и использовать явный признак HDR, если он есть. Не проверено', en: 'Log what the TV reports about the video and use an explicit HDR flag if there is one. Not tested' },
 
@@ -746,23 +753,85 @@
 
 
     // ---------- Профиль: применение, уведомление, событие для других плагинов ----------
-    // Откуда профиль: name, torrserver, parser, ffprobe, hls, webos, manual, override, display, default (строки src_* в 05_i18n.js)
+    // Откуда профиль: name, torrserver, parser, ffprobe, hls, webos, manual, override, default;
+    // почему HDR-видео без затемнения: display, player, screen (строки src_* в 05_i18n.js)
     function sourceName(source) {
         return source && I18n.has('src_' + source) ? tr('src_' + source) : '';
     }
     // Чем выше, тем надёжнее; более слабый источник не перебивает уже найденное
     var PRIO = { 'default': 0, name: 1, torrserver: 2, webos: 3, hls: 4, parser: 5, ffprobe: 6, override: 8, manual: 9 };
 
-    // Экран сам не показывает HDR (эксперимент): только если браузер знает признак dynamic-range
-    function displaySdr() {
+    // ---------- Экран: затемнять есть смысл, только если HDR действительно показывается ----------
+    // Настройка «Экран»: auto | hdr | sdr. В «Авто»:
+    //  1) браузер знает признак dynamic-range (Chrome 98+, Safari, Firefox 100+): standard — экран без HDR;
+    //  2) не знает (старый WebView: Android 11 на Tanix TX9 — Chrome 84) — умеет ли встроенный плеер HEVC 10 бит
+    //     или Dolby Vision. Не умеет — HDR-видео в нём не запускается (TX9: DEMUXER_ERROR_NO_SUPPORTED_STREAMS),
+    //     а то, что играет с «HDR» в названии, на экран выходит в SDR;
+    //  3) LG webOS, Samsung Tizen и другие ТВ-платформы — как раньше, решает видео.
+    var TV_PLATFORMS = ['webos', 'tizen', 'orsay', 'netcast'];
+    var HDR_CODECS = ['video/mp4; codecs="hvc1.2.4.L153.B0"', 'video/mp4; codecs="hev1.2.4.L153.B0"',
+        'video/mp4; codecs="dvh1.08.06"', 'video/mp4; codecs="dvhe.08.06"'];
+    var hdrDecoder;              // кэш hdrDecoderSupport(): true | false | null
+
+    function tvPlatform() {
+        if (isWebos()) return true;
         try {
-            if (!window.matchMedia) return false;
-            return !window.matchMedia('(dynamic-range: high)').matches && window.matchMedia('(dynamic-range: standard)').matches;
-        } catch (e) { return false; }
+            for (var i = 0; i < TV_PLATFORMS.length; i++) if (Lampa.Platform.is(TV_PLATFORMS[i])) return true;
+        } catch (e) {}
+        return false;
+    }
+
+    // 'high' | 'standard' | null (браузер признака не знает)
+    function displayRange() {
+        try {
+            if (!window.matchMedia) return null;
+            if (window.matchMedia('(dynamic-range: high)').matches) return 'high';
+            if (window.matchMedia('(dynamic-range: standard)').matches) return 'standard';
+        } catch (e) {}
+        return null;
+    }
+
+    // Декодирует ли встроенный плеер HEVC 10 бит или Dolby Vision: true | false | null (не узнать)
+    function hdrDecoderSupport() {
+        if (hdrDecoder !== undefined) return hdrDecoder;
+        var video = null, known = false, any = false;
+        try { video = document.createElement('video'); } catch (e) {}
+        for (var i = 0; i < HDR_CODECS.length; i++) {
+            try {
+                if (video && typeof video.canPlayType === 'function') {
+                    known = true;
+                    if (video.canPlayType(HDR_CODECS[i])) any = true;
+                }
+            } catch (e) {}
+            try {
+                if (window.MediaSource && typeof window.MediaSource.isTypeSupported === 'function') {
+                    known = true;
+                    if (window.MediaSource.isTypeSupported(HDR_CODECS[i])) any = true;
+                }
+            } catch (e) {}
+        }
+        hdrDecoder = known ? any : null;
+        return hdrDecoder;
+    }
+
+    // Почему HDR-видео будет показано в SDR: 'screen' (настройка), 'display' (dynamic-range: standard),
+    // 'player' (плеер без HDR) или '' (HDR показывается или узнать нельзя)
+    function screenBlocksHdr() {
+        var mode = opt('adaptive_subs_screen');
+        if (mode === 'sdr') return 'screen';
+        if (mode === 'hdr' || tvPlatform()) return '';
+        var range = displayRange();
+        if (range) return range === 'standard' ? 'display' : '';
+        return hdrDecoderSupport() === false ? 'player' : '';
+    }
+
+    function screenInfo() {
+        return { mode: opt('adaptive_subs_screen'), tv: tvPlatform(), range: displayRange(), decoder: hdrDecoderSupport(), blocks: screenBlocksHdr() };
     }
 
     function emit() {
         var detail = { type: 'profile', profile: current.profile, kind: current.kind, brightness: current.brightness, source: current.source };
+        if (current.screen) detail.screen = current.screen;     // HDR-видео, но экран или плеер его не показывает
         try { if (Lampa.Listener && typeof Lampa.Listener.send === 'function') Lampa.Listener.send('adaptive_subs', detail); } catch (e) {}
         try {
             var ev;
@@ -776,20 +845,22 @@
     }
 
     function applyKind(kind, source) {
-        var before = current.profile + '|' + current.kind + '|' + current.brightness;
-        var hdr = isHdrKind(kind);
+        var before = current.profile + '|' + current.kind + '|' + current.brightness + '|' + current.screen;
+        var hdr = isHdrKind(kind), mine = source === 'manual' || source === 'override';
         current.kind = kind || 'sdr';
         current.source = source || '';
         current.profile = hdr ? 'hdr' : 'sdr';
-        if (source !== 'manual' && source !== 'override') current.detected = current.kind;
-        if (hdr && source !== 'manual' && source !== 'override' && flag('adaptive_subs_display') && displaySdr()) {
-            current.profile = 'sdr';
-            current.source = 'display';
+        current.screen = '';
+        if (!mine) current.detected = current.kind;
+        // HDR-видео, которое экран или плеер покажет в SDR: субтитры обычные (ручной выбор сильнее)
+        if (hdr && !mine) {
+            current.screen = screenBlocksHdr();
+            if (current.screen) current.profile = 'sdr';
         }
         current.brightness = current.profile === 'hdr' ? levelFor(current.kind) : 1;
         applyStyle();
         applyWebos();
-        if (before !== current.profile + '|' + current.kind + '|' + current.brightness) emit();
+        if (before !== current.profile + '|' + current.kind + '|' + current.brightness + '|' + current.screen) emit();
     }
 
     function announce(refined, extra) {
@@ -798,6 +869,8 @@
         var state = hdr ? tr('state_hdr', { kind: KIND_NAMES[current.kind] || 'HDR', pct: Math.round(current.brightness * 100) }) : tr('state_sdr');
         var text = tr(refined ? 'noty_refined' : 'noty_subs', { state: state });
         var why = extra || sourceName(current.source);
+        // «Dolby Vision по названию; экран без HDR»
+        if (!extra && current.screen) why = (KIND_NAMES[current.kind] || 'HDR') + (why ? ' ' + why : '') + '; ' + sourceName(current.screen);
         if (why) text += ' (' + why + ')';
         try { Lampa.Noty.show(text); } catch (e) { log(text); }
     }
@@ -955,7 +1028,17 @@
         return next;
     }
 
-    var KEY_CODES = { red: [403], green: [404], yellow: [405], blue: [406] };
+    var KEY_CODES = { red: 403, green: 404, yellow: 405, blue: 406 };
+    // Цветные кнопки по имени клавиши (KeyboardEvent.key): на Android-приставке Tanix TX9 WebView отдаёт их
+    // с keyCode 0 и key «ColorF0Red» … «ColorF3Blue» (как в плагине «Пропуск заставок»)
+    var COLOR_KEY_NAMES = { ColorF0Red: 403, ColorF1Green: 404, ColorF2Yellow: 405, ColorF3Blue: 406 };
+
+    function keyCodeOf(code, ev) {
+        code = parseInt(code, 10);
+        if (code > 0) return code;
+        var name = ev && ev.key;
+        return typeof name === 'string' && COLOR_KEY_NAMES.hasOwnProperty(name) ? COLOR_KEY_NAMES[name] : code;
+    }
 
     function playerActive() {
         try {
@@ -969,8 +1052,8 @@
         var kp = Lampa.Keypad && Lampa.Keypad.listener;
         if (!kp || typeof kp.follow !== 'function') return;
         kp.follow('keydown', function (e) {
-            var codes = KEY_CODES[opt('adaptive_subs_key')];
-            if (!codes || !e || codes.indexOf(parseInt(e.code, 10)) === -1 || !playerActive()) return;
+            var want = KEY_CODES[opt('adaptive_subs_key')];
+            if (!want || !e || keyCodeOf(e.code, e.event) !== want || !playerActive()) return;
             toggleProfile();
             if (e.event && typeof e.event.preventDefault === 'function') e.event.preventDefault();
         });
@@ -1026,12 +1109,14 @@
             values: { auto: tr('mode_auto'), hdr: tr('mode_hdr'), sdr: tr('mode_sdr') } },
             { name: tr('set_mode'), description: tr('set_mode_d') },
             { onChange: reevaluate });
+        add({ name: 'adaptive_subs_screen', type: 'select', default: DEFAULTS.adaptive_subs_screen,
+            values: { auto: tr('screen_auto'), hdr: tr('screen_hdr'), sdr: tr('screen_sdr') } },
+            { name: tr('set_screen'), description: tr('set_screen_d') },
+            { onChange: reevaluate });
         add({ name: 'adaptive_subs_ffp', type: 'trigger', default: true },
             { name: tr('set_ffp'), description: tr('set_ffp_d') });
         add({ name: 'adaptive_subs_hls', type: 'trigger', default: true },
             { name: tr('set_hls'), description: tr('set_hls_d') });
-        add({ name: 'adaptive_subs_display', type: 'trigger', default: false },
-            { name: tr('set_display'), description: tr('set_display_d') });
         if (webos) {
             add({ name: 'adaptive_subs_webos_probe', type: 'trigger', default: false },
                 { name: tr('set_probe'), description: tr('set_probe_d') });
@@ -1104,7 +1189,9 @@
         Lampa.Player.listener.follow('start', onStart);
         Lampa.Player.listener.follow('destroy', onDestroy);
         bindKey();
-        log('v' + VERSION + ' initialized' + (webosOrigRequest ? ' | webOS' : ''));
+        var scr = screenInfo();
+        log('v' + VERSION + ' initialized' + (webosOrigRequest ? ' | webOS' : '') + ' | display: ' + (scr.range || 'unknown') +
+            ' | HDR decoder: ' + (scr.decoder === null ? 'unknown' : (scr.decoder ? 'yes' : 'no')) + (scr.blocks ? ' | HDR shown as SDR (' + scr.blocks + ')' : ''));
     }
 
     // Экспорт для других плагинов, отладки и тестов
@@ -1119,6 +1206,7 @@
             announce(false);
         },
         toggle: toggleProfile,
+        screen: screenInfo,
         webos: function () { return !!webosOrigRequest; },
         _test: {
             evaluate: evaluate,
@@ -1129,6 +1217,9 @@
             kindFromHls: kindFromHls,
             kindFromData: kindFromData,
             levelFor: levelFor,
+            screenBlocksHdr: screenBlocksHdr,
+            keyCodeOf: keyCodeOf,
+            resetScreen: function () { hdrDecoder = undefined; },
             toneFor: toneFor,
             overrideKey: overrideKey,
             describeData: describeData,

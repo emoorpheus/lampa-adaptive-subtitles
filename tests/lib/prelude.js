@@ -211,7 +211,12 @@
     doc.body = body;
     doc.currentScript = B.scriptSrc ? { src: B.scriptSrc } : null;
     doc.pictureInPictureElement = null;
-    doc.createElement = function (tag) { return new El(tag); };
+    // B.codecs: { 'video/mp4; codecs="…"': 'probably' } — у <video> появляется canPlayType (без него — браузер «не говорит»)
+    doc.createElement = function (tag) {
+        var e = new El(tag);
+        if (B.codecs && String(tag).toLowerCase() === 'video') e.canPlayType = function (t) { return B.codecs[t] || ''; };
+        return e;
+    };
     doc.createElementNS = function (ns, tag) { var e = new El(tag, ns); e.tagName = tag; return e; };
     doc.createTextNode = function (t) { var e = new El('#text'); e.nodeType = 3; e._text = String(t); return e; };
     doc.getElementById = function (id) { var f = null; walk(doc, function (n) { if (n.id === id) { f = n; return true; } }); return f; };
@@ -239,6 +244,10 @@
     G.atob = B.atob;
     G.matchMedia = function (q) { return { matches: !!(B.media && B.media[q]), media: q }; };
     G.HTMLMediaElement = function HTMLMediaElement() {};
+    // B.mse: { type: true } — MediaSource.isTypeSupported; без B.mse MediaSource нет
+    Object.defineProperty(G, 'MediaSource', { configurable: true, get: function () {
+        return B.mse ? { isTypeSupported: function (t) { return !!B.mse[t]; } } : undefined;
+    } });
 
     // ---------------- XMLHttpRequest ----------------
     function XHR() {
@@ -497,8 +506,8 @@
             video = null;
         },
         // Lampa core/keypad.js: keydown -> listener; если не defaultPrevented — действие Lampa; keyup -> OK
-        key: function (code, phase) {
-            var ev = { defaultPrevented: false, preventDefault: function () { this.defaultPrevented = true; } };
+        key: function (code, phase, name) {
+            var ev = { key: name, defaultPrevented: false, preventDefault: function () { this.defaultPrevented = true; } };
             var enter = code === 13 || code === 29443 || code === 117 || code === 65385;
             if (phase === 'keyup') {
                 Keypad.listener.send('keyup', { code: code, enabled: true, event: ev });

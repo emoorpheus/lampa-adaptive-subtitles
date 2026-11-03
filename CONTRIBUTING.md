@@ -1,8 +1,9 @@
 # Contributing
 
 Thank you for helping! The most valuable contribution right now is a **report from a device that has not been tested yet** —
-Samsung Tizen, Android TV, older LG webOS versions — with HDR10, Dolby Vision or HLG video. So far the plugin has been tested on
-LG webOS 25 (README → Tested devices). See [docs/tv-checklist.md](docs/tv-checklist.md).
+Samsung Tizen, other Android TV boxes, older LG webOS versions — with HDR10, Dolby Vision or HLG video. So far the plugin has been
+tested on LG webOS 25 (1.0.0) and one Android TV box, Tanix TX9 (1.1.0-beta.2) — README → Tested devices. See
+[docs/tv-checklist.md](docs/tv-checklist.md) (in Russian: [docs/tv-checklist.ru.md](docs/tv-checklist.ru.md)).
 
 ## Rules
 
@@ -11,10 +12,14 @@ LG webOS 25 (README → Tested devices). See [docs/tv-checklist.md](docs/tv-chec
 - The user interface is in Russian and English and follows the Lampa language: every user-visible string goes through `tr()`
   and the table in `src/05_i18n.js` ([Translations](#translations)). Code comments and test names are in Russian; English issues and
   pull requests are welcome.
+- Documentation: `README.md`, `docs/*.md` and `CHANGELOG.md` are in English; `README.ru.md` and `docs/*.ru.md` are the Russian
+  versions — update both. Release notes `docs/releases/vX.Y.Z.md` have an English and a Russian part.
 - No runtime dependencies and no external services. The plugin talks only to the user's TorrServer, the stream that is already
   playing and, on LG webOS, the TV's media service — please keep it that way.
 - Keep the public interface compatible: settings keys `adaptive_subs_*`, the `adaptive_subs` event, `window.AdaptiveSubs` and
   `window.__lampa_ffp__` (v1) are used by other plugins (for example Skip Intro).
+- **AI coding assistants** (Claude Code, Codex, Gemini CLI, …): the project rules for them are in [AGENTS.md](AGENTS.md);
+  [CLAUDE.md](CLAUDE.md) only imports it. Keep these files in sync with this guide when the rules change.
 - Do not commit private data. Run `npm run check` before pushing (IP addresses, e-mails, tokens, personal paths). Put your own
   nickname, host names and server paths into `.publish-denylist` (one per line, git-ignored) to have them checked as well.
 
@@ -37,7 +42,7 @@ npm run e2e:setup           # clones the Lampa web build into ref/ (~30 MB) and 
 CHROMIUM_PATH=/path/to/chromium npm run e2e   # or first: npx playwright install chromium
 ```
 
-The scenarios (`e2e_player`, `e2e_movie`, `e2e_torrent`, `e2e_settings`) run the real Lampa web build on `127.0.0.1:8123`
+The scenarios (`e2e_player`, `e2e_movie`, `e2e_torrent`, `e2e_screen`, `e2e_settings`, `e2e_i18n`) run the real Lampa web build on `127.0.0.1:8123`
 and mock every external request, including TorrServer. Run a single one with `node e2e/run_all.js e2e_player`.
 
 ## Translations

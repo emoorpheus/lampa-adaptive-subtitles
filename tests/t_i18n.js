@@ -17,6 +17,8 @@ function aenv(o) {
     const env = createEnv(o.webos ? { platform: 'webos' } : {});
     env.T.playerDom();
     if (o.lang) env.setStorage('language', o.lang);
+    if (o.display) env.bridge.media = o.display;
+    if (o.codecs) { env.bridge.codecs = o.codecs; env.bridge.platform = 'android'; }
     if (o.settings) for (const k of Object.keys(o.settings)) env.setStorage(k, o.settings[k]);
     if (o.webos) env.run('window.webOS = { platform: { tv: true }, service: { request: function () { return {}; } } };');
     env.load('adaptive');
@@ -146,6 +148,19 @@ test('английский: уведомления о профиле, ручно
     // ручной выбор из другого плагина: window.AdaptiveSubs.set('hdr')
     env.A.set('sdr');
     assert.strictEqual(env.noty().pop(), 'Subtitles: SDR — normal (manually)');
+    // HDR-видео, которое экран или плеер покажет в SDR
+    env = aenv({ lang: 'en', display: { '(dynamic-range: standard)': true } });
+    start(env, { title: 'Film.2160p.DV.mkv', url: 'https://cdn.example/f.mp4' });
+    await env.advance(2000);
+    assert.deepStrictEqual(env.noty(), ['Subtitles: SDR — normal (Dolby Vision by name; display without HDR)']);
+    env = aenv({ lang: 'en', codecs: {} });
+    start(env, { title: 'Film.2160p.HDR10.mkv', url: 'https://cdn.example/f.mp4' });
+    await env.advance(2000);
+    assert.deepStrictEqual(env.noty(), ['Subtitles: SDR — normal (HDR10 by name; the player cannot play HDR)']);
+    env = aenv({ lang: 'en', settings: { adaptive_subs_screen: 'sdr' } });
+    start(env, { title: 'Film.2160p.HLG.mkv', url: 'https://cdn.example/f.mp4' });
+    await env.advance(2000);
+    assert.deepStrictEqual(env.noty(), ['Subtitles: SDR — normal (HLG by name; display: SDR only)']);
 });
 
 run('t_i18n: язык интерфейса');
