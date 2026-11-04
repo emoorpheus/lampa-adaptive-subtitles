@@ -4,9 +4,9 @@
 
 | Version | Supported |
 |---|---|
-| 1.0.x | yes |
-| 1.1.0-beta.x | pre-release for testing; fixes go into the next beta or 1.1.0 |
-| internal builds (3.x / 4.0) | no — update to 1.0.x |
+| 1.1.x | yes |
+| 1.0.x, 1.1.0-beta.x | no — update to 1.1.x |
+| internal builds (3.x / 4.0) | no — update to 1.1.x |
 
 Only the latest release receives fixes.
 

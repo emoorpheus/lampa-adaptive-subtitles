@@ -6,6 +6,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-04
+
+Stable release with the changes of the 1.1 betas — an English interface, the **Display** setting and color keys on Android TV
+boxes — and a fix for embedded subtitles on LG webOS. Tested on an LG OLED TV (webOS 25) and an Android TV box (Tanix TX9).
+Upgrading from 1.0.0: see 1.1.0-beta.1 and 1.1.0-beta.2 below; settings and manual HDR/SDR choices are kept.
+
+### Fixed
+
+- LG webOS: embedded subtitles (inside an MKV, drawn by the TV) were not dimmed after Lampa re-created the video element
+  (log line “repeat to new video”, [app.min.js](https://github.com/yumata/lampa/blob/4294a571aad8883116e57d975ad05519f84be13e/app.min.js#L7970)): on the LG TV an old `<video>` without a media ID stayed first on the
+  page, and the plugin took the media ID from the first `<video>`. Now the plugin uses the video of Lampa's player
+  (`Lampa.PlayerVideo.video()`), then the first `<video>` with a media ID, and checks for a new media ID every 2 s until the player
+  is closed (before: only during the first 20 s).
+
+### Tested
+
+- Unit tests on Node.js 22 and 24 (33 tests, one new for this fix) and end-to-end tests in the Lampa 3.4.4 web build in Chromium
+  (34 checks).
+- **LG OLED65M59LA** (webOS 25, Lampa web app served by Lampac), a test plan run over the webOS developer tools with screen captures
+  from the TV; the tested build was 1.1.0-beta.2 with this fix (only the version differs):
+  - the start line `display: high | HDR decoder: yes`;
+  - test videos named HDR10, Dolby Vision and HLG: external SRT and ASS subtitles dimmed to 48 % (text brightness 122 of 255; yellow
+    ASS text stays yellow), notification “… (by name)”;
+  - embedded SRT subtitles in an HDR10 MKV: brightness 104 in HDR and 205 in SDR, also with an old `<video>` left first on the page
+    (not dimmed before this fix);
+  - an HLS stream with `VIDEO-RANGE=PQ`: HDR10 (by HLS stream); an online 2160p AV1 stream without HDR signs: SDR;
+  - a Dolby Vision torrent through TorrServer: Dolby Vision (by TorrServer torrent); with a neutral title ffprobe (`/ffp`) updated
+    SDR to “Dolby Vision — dimmed, 48% (by file)” 2 s after the start;
+  - the yellow key (405), pressed by the maintainer on the remote's on-screen color keys, switches HDR ↔ SDR and remembers the
+    choice; **Forget manual HDR/SDR choices**, **Display → SDR only: do not dim** and the English interface work;
+  - ASS subtitles are drawn at 60 fps with and without dimming (with dimming one frame of 1201 took longer than 25 ms, without it
+    none of 1200).
+- The Tanix TX9 results of 1.1.0-beta.2 still apply (the display check and the color keys are unchanged).
+
+### Known issues
+
+- **Yellow key on LG webOS.** In the player on webOS Lampa itself also uses the yellow key (405): it switches the color of the
+  subtitles drawn by the TV ([app.min.js](https://github.com/yumata/lampa/blob/4294a571aad8883116e57d975ad05519f84be13e/app.min.js#L7530)). If you choose the yellow key for HDR/SDR, the color of embedded subtitles
+  may change too; choose another key if this bothers you.
+- On the Tanix TX9 the built-in player could not play an HEVC 10-bit HDR10 test file, and torrents were opened in an external
+  Android player, where the plugin does not run.
+- The plugin cannot see whether a TV or box converts HDR to SDR by itself; then choose **Display → SDR only: do not dim**.
+- Samsung Tizen has not been reported yet; HLG has been checked only with a test video named HLG.
+
 ## [1.1.0-beta.2] - 2026-11-03
 
 Pre-release for testing: subtitles are dimmed only when HDR is really shown, and color keys work on Android TV boxes.
@@ -110,7 +154,8 @@ First public release.
   settings and manual HDR/SDR choices of those builds are kept (same storage keys).
 - Self-hosted by IP address: Lampa does not add its cache-busting parameter to such URLs, so add `?v=1.0.0` to the plugin URL.
 
-[Unreleased]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.1.0-beta.2...HEAD
+[Unreleased]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.1.0-beta.2...v1.1.0
 [1.1.0-beta.2]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.1.0-beta.1...v1.1.0-beta.2
 [1.1.0-beta.1]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.0.0...v1.1.0-beta.1
 [1.0.0]: https://github.com/emoorpheus/lampa-adaptive-subtitles/releases/tag/v1.0.0

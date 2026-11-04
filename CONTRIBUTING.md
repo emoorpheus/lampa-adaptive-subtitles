@@ -2,7 +2,7 @@
 
 Thank you for helping! The most valuable contribution right now is a **report from a device that has not been tested yet** —
 Samsung Tizen, other Android TV boxes, older LG webOS versions — with HDR10, Dolby Vision or HLG video. So far the plugin has been
-tested on LG webOS 25 (1.0.0) and one Android TV box, Tanix TX9 (1.1.0-beta.2) — README → Tested devices. See
+tested on LG webOS 25 (1.1.0) and one Android TV box, Tanix TX9 (1.1.0-beta.2) — README → Tested devices. See
 [docs/tv-checklist.md](docs/tv-checklist.md) (in Russian: [docs/tv-checklist.ru.md](docs/tv-checklist.ru.md)).
 
 ## Rules

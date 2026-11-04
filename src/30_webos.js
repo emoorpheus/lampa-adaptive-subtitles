@@ -41,9 +41,15 @@
         return (isNaN(v) || v < 0 || v > 4) ? null : v;
     }
 
+    // mediaId видео плеера: сначала Lampa.PlayerVideo.video(), затем любое <video> с mediaId.
+    // На LG (webOS 25) после «repeat to new video» в DOM первым может остаться старое <video> без mediaId
     function currentMediaId() {
-        var video = document.querySelector('video');
-        return video && video.mediaId ? video.mediaId : null;
+        var video = null, list, i;
+        try { video = Lampa.PlayerVideo && typeof Lampa.PlayerVideo.video === 'function' ? Lampa.PlayerVideo.video() : null; } catch (e) { video = null; }
+        if (video && video.mediaId) return video.mediaId;
+        list = document.querySelectorAll ? document.querySelectorAll('video') : [];
+        for (i = 0; i < list.length; i++) if (list[i] && list[i].mediaId) return list[i].mediaId;
+        return null;
     }
 
     // Эксперимент (по умолчанию выключен): что webOS сообщает о видео в sourceInfo.
@@ -157,6 +163,8 @@
                 applied = id;
                 applyWebos();
             }
-            if (++tries < 40) setTimeout(tick, 500);
+            // первые 20 с — каждые 0,5 с; дальше до конца просмотра — каждые 2 с
+            // (Lampa на webOS может пересоздать видео с новым mediaId посреди просмотра)
+            setTimeout(tick, ++tries < 40 ? 500 : 2000);
         })();
     }

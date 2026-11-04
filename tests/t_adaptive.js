@@ -510,6 +510,35 @@ test('webOS: уровень Dolby Vision меняет долю пропорци�
     assert.strictEqual(calls(env, 'setSubtitleCharacterOpacity').pop().p.mediaId, 'm3');
 });
 
+test('webOS: старое <video> без mediaId первым в DOM (LG, «repeat to new video») и новое видео посреди просмотра', async () => {
+    const env = aenv({ webos: true });
+    start(env, { title: 'Film.2160p.HDR.mkv', url: 'https://cdn.example/f.mp4' }, { mediaId: 'm1' });
+    // как на LG webOS 25: Lampa пересоздала видео, старое <video> без mediaId осталось в DOM первым
+    const cur = env.T.video(), host = cur.parentNode, stale = env.T.makeVideo({});
+    host.insertBefore(stale, cur);
+    assert.strictEqual(env.W.document.querySelector('video'), stale);
+    await env.advance(600);
+    assert.deepStrictEqual(calls(env, 'setSubtitleCharacterOpacity').pop().p, { charOpacity: 128, mediaId: 'm1' });
+    // Lampa.PlayerVideo.video() недоступно — берём первое <video> с mediaId
+    const pv = env.L.PlayerVideo.video;
+    env.L.PlayerVideo.video = function () { return null; };
+    cur.mediaId = 'm4';
+    await env.advance(2500);
+    assert.deepStrictEqual(calls(env, 'setSubtitleCharacterOpacity').pop().p, { charOpacity: 128, mediaId: 'm4' });
+    env.L.PlayerVideo.video = pv;
+    // через минуту после старта видео снова пересоздано — применяем к новому mediaId
+    await env.advance(60000);
+    cur.mediaId = 'm5';
+    await env.advance(2500);
+    assert.strictEqual(calls(env, 'setSubtitleCharacterOpacity').pop().p.mediaId, 'm5');
+    // после закрытия плеера больше не следим
+    env.T.destroy();
+    const n = calls(env).length;
+    cur.mediaId = 'm6';
+    await env.advance(5000);
+    assert.strictEqual(calls(env).length, n);
+});
+
 test('webOS: сведения sourceInfo (эксперимент, выкл. по умолчанию) — журнал и явный признак; обработчик Lampa вызывается', async () => {
     const info = { sourceInfo: { programInfo: [{ numAudioTracks: 1, videoTrackInfo: [{ codec: 'HEVC', width: 3840, height: 2160, hdrType: 'HDR10' }] }] } };
     // выключено: subscribe не оборачиваем

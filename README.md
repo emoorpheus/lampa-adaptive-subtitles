@@ -7,12 +7,10 @@
 A plugin for the [Lampa](https://github.com/yumata/lampa) media center that **dims subtitles in HDR, Dolby Vision and HLG video**,
 so bright white text does not glare over dark scenes on OLED TVs. SDR video keeps Lampa's normal subtitles.
 
-> **Version 1.1.0-beta.2 — a pre-release for testing.** New in the 1.1 betas: an **English interface** (the plugin follows the
-> Lampa language) and, in beta.2, the **Display** setting — subtitles are no longer dimmed when HDR video is shown as SDR (an SDR
-> screen, or a player that cannot play HDR) — and color keys that work on Android TV boxes. Beta.2 has been tested on an
-> **Android TV box (Tanix TX9)**; the 1.1 betas have not been tested on an LG OLED TV yet. The stable version is
-> [1.0.0](https://github.com/emoorpheus/lampa-adaptive-subtitles/releases/tag/v1.0.0), tested by the maintainer on an
-> **LG OLED TV (webOS 25)** — see [Tested devices](#tested-devices). Samsung Tizen has not been reported yet.
+> **Version 1.1.0.** New since 1.0: an **English interface** (the plugin follows the Lampa language); the **Display** setting —
+> subtitles are no longer dimmed when HDR video is shown as SDR (an SDR screen, or a player that cannot play HDR); color keys that
+> work on Android TV boxes; and a fix for embedded subtitles on LG webOS. Tested by the maintainer on an **LG OLED TV (webOS 25)**
+> and an **Android TV box (Tanix TX9)** — see [Tested devices](#tested-devices). Samsung Tizen has not been reported yet.
 
 [Russian version](README.ru.md)
 
@@ -39,7 +37,7 @@ If the detection is wrong, a remote key switches the profile and remembers your 
 - **Detection**, from the most to the least reliable: your manual choice → ffprobe data of the file (TorrServer `/ffp` or the
   torrent parser; distinguishes HDR10, Dolby Vision and HLG) → `VIDEO-RANGE` in the HLS master playlist → TorrServer torrent title →
   keywords in the file name (HDR, HDR10, HDR10+, DV, Dolby Vision, HLG; without false hits such as "DVDRip" or "HDRezka").
-- **Display check** (setting **Display**, since 1.1.0-beta.2). In **Auto** the plugin does not dim if the browser reports a display
+- **Display check** (setting **Display**, since 1.1.0). In **Auto** the plugin does not dim if the browser reports a display
   without HDR (CSS `dynamic-range: standard`) or if the built-in player cannot decode HDR video (HEVC Main 10 and Dolby Vision,
   checked with `canPlayType` and `MediaSource.isTypeSupported`). On LG webOS and Samsung Tizen, Auto keeps the 1.0 behaviour: the video decides.
 - **Dimming:** by brightness (colours preserved) or by recolouring to grey; one level for all HDR types or separate levels for HDR10, Dolby Vision and HLG.
@@ -88,13 +86,15 @@ flowchart LR
 
 ## Tested devices
 
-Manual tests by the maintainer: **1.1.0-beta.2** on 2026-11-03 on the Tanix TX9 (a test plan run over `adb` and the WebView
-developer tools) and **1.0.0** on 2026-11-01 on the LG TV (the tested build was the internal 4.0 with the same code — only the
-version string, the header comment and two hint texts in the settings differ). **The 1.1 betas have not been tested on the LG TV yet.**
+Manual tests by the maintainer: **1.1.0** on 2026-11-04 on the LG TV (a test plan run over the webOS developer tools with screen
+captures from the TV; the HDR/SDR key was also pressed on the TV remote; the tested build was 1.1.0-beta.2 with the fix of 1.1.0 —
+the same code, only the version differs), **1.1.0-beta.2** on 2026-11-03 on the Tanix TX9 (a test plan run over `adb` and the
+WebView developer tools) and **1.0.0** on 2026-11-01 on the LG TV (the tested build was the internal 4.0 with the same code — only
+the version string, the header comment and two hint texts in the settings differ).
 
 | Device | System and Lampa client | Result |
 |---|---|---|
-| LG OLED65M59LA | webOS 25, Lampa web app (served by Lampac) | **1.0.0:** subtitles dimmed in HDR and Dolby Vision video |
+| LG OLED65M59LA | webOS 25, Lampa web app (served by Lampac) | **1.1.0:** the plugin reports `display: high`, `HDR decoder: yes`; test videos named HDR10, Dolby Vision and HLG get external SRT and ASS subtitles dimmed to 48 % (text brightness 122 of 255 on a screen capture; yellow ASS text stays yellow); embedded SRT subtitles in an HDR10 MKV (drawn by the TV) — brightness 104 in HDR and 205 in SDR, also with an old `<video>` left on the page (fixed in 1.1.0); an HLS stream with `VIDEO-RANGE=PQ` — HDR10 (by HLS stream), an online 2160p AV1 stream without HDR signs — SDR; a Dolby Vision torrent (HEVC Main 10, 1080p) through TorrServer — Dolby Vision by the torrent title, and with a neutral title ffprobe (`/ffp`) updated SDR to “Dolby Vision — dimmed, 48% (by file)” 2 s after the start; the yellow key on the remote's on-screen color keys (key code 405) switches HDR ↔ SDR and remembers the choice; **Forget manual HDR/SDR choices**, **Display → SDR only: do not dim** and the English interface work; ASS subtitles are drawn at 60 fps with and without dimming. **1.0.0:** subtitles dimmed in HDR and Dolby Vision video |
 | Tanix TX9 | Android 11 (Android TV), Lampa Android app 1.12.4 (WebView 84), Lampa 3.4.4 | **1.1.0-beta.2:** the plugin reports `display: unknown`, `HDR decoder: no` — HDR is shown as SDR there; an SDR test video named `…2160p.WEB-DL.DV.HDR.mkv` keeps undimmed SRT and ASS subtitles with the notification “SDR — normal (Dolby Vision by name; the player cannot play HDR)”; the red key (sent with `adb` as `KEYCODE_PROG_RED`, the WebView reports `ColorF0Red`) switches HDR ↔ SDR; the **Display** setting is shown in the menu. **1.1.0-beta.1:** an online HLS stream with `VIDEO-RANGE=SDR` got SDR (by HLS stream); the same SDR video named DV was dimmed to 48 % and the color key did nothing — both fixed in beta.2 |
 
 Reports from other devices are welcome — Samsung Tizen, other Android TV boxes, older webOS: [docs/tv-checklist.md](docs/tv-checklist.md).
@@ -117,11 +117,11 @@ Reports from other devices are welcome — Samsung Tizen, other Android TV boxes
    https://emoorpheus.github.io/lampa-adaptive-subtitles/adaptive_subs.js
    ```
 
-   This address always serves the latest **stable** release (pre-releases are never published there). To try this beta,
-   or to pin an exact version, use jsDelivr:
+   This address always serves the latest **stable** release (pre-releases are never published there). To pin an exact
+   version, use jsDelivr:
 
    ```text
-   https://cdn.jsdelivr.net/gh/emoorpheus/lampa-adaptive-subtitles@v1.1.0-beta.2/dist/adaptive_subs.js
+   https://cdn.jsdelivr.net/gh/emoorpheus/lampa-adaptive-subtitles@v1.1.0/dist/adaptive_subs.js
    ```
 
 3. Restart Lampa (close the app completely and open it again).
@@ -138,7 +138,7 @@ Lampa adds its cache-busting `reset` parameter only to URLs **without** an IPv4 
 Put the version into the URL and change it with every update:
 
 ```text
-http://<YOUR_SERVER_IP>:<PORT>/plugins/adaptive_subs.js?v=1.1.0-beta.2
+http://<YOUR_SERVER_IP>:<PORT>/plugins/adaptive_subs.js?v=1.1.0
 ```
 
 > Do not use `raw.githubusercontent.com` links: GitHub serves them as `text/plain` with `X-Content-Type-Options: nosniff`,
@@ -195,10 +195,11 @@ own server by IP address ([docs/self-hosting.md](docs/self-hosting.md)).
 
 ## Known issues
 
-- **Embedded subtitles on LG webOS** (inside an MKV, drawn by the TV) have not been checked separately on a real TV yet; the
-  maintainer's test covered dimming in HDR and Dolby Vision video in general.
-- **The 1.1 betas have not been tested on an LG OLED TV**, and Samsung Tizen has not been reported yet. On LG webOS and Tizen,
-  **Display → Auto** does not change the 1.0 behaviour; this is covered by automated tests only.
+- **Samsung Tizen** has not been reported yet. On Tizen, **Display → Auto** keeps the 1.0 behaviour; this is covered by automated
+  tests only. HLG has been checked only with a test video named HLG.
+- **Yellow key on LG webOS.** In the player on webOS Lampa itself also uses the yellow key (405): it switches the color of the
+  subtitles drawn by the TV ([app.min.js](https://github.com/yumata/lampa/blob/4294a571aad8883116e57d975ad05519f84be13e/app.min.js#L7530)). If you choose the yellow key for HDR/SDR, the color of embedded subtitles
+  may change too; choose another key if this bothers you.
 - **Only Lampa's built-in player.** External players (for example an Android player app chosen in Lampa) draw their own subtitles;
   the plugin cannot change them. On the tested Tanix TX9, torrents were opened in such an external player.
 - **Tanix TX9 (WebView 84):** the built-in player could not play an HEVC 10-bit HDR10 test file (`DEMUXER_ERROR_NO_SUPPORTED_STREAMS`),
@@ -224,7 +225,7 @@ own server by IP address ([docs/self-hosting.md](docs/self-hosting.md)).
   A report with the device model helps ([docs/tv-checklist.md](docs/tv-checklist.md)).
 - **LG webOS: embedded subtitles do not change.** They are drawn by the TV itself; the plugin only changes their opacity through
   the TV's media service. A report helps ([docs/tv-checklist.md](docs/tv-checklist.md)).
-- **Which version is loaded?** The console prints `[AdaptiveSubs] v1.1.0-beta.2 initialized | display: … | HDR decoder: …`, and
+- **Which version is loaded?** The console prints `[AdaptiveSubs] v1.1.0 initialized | display: … | HDR decoder: …`, and
   `window.AdaptiveSubs.version` returns the version. `display` is `high`, `standard` or `unknown` (the browser does not report it),
   `HDR decoder` is `yes`, `no` or `unknown`; `HDR shown as SDR (display | player | screen)` is added when Auto (or the setting) turns
   dimming off. On Android: `adb logcat | grep -F AdaptiveSubs`. For a self-hosted copy see
@@ -234,10 +235,10 @@ own server by IP address ([docs/self-hosting.md](docs/self-hosting.md)).
 
 - Lampa event `adaptive_subs` (via `Lampa.Listener`) and the DOM event `adaptive_subs:profile` on `window`, sent only when the state changes:
   `{ type: 'profile', profile: 'hdr' | 'sdr', kind: 'hdr' | 'hdr10' | 'dv' | 'hlg' | 'sdr', brightness: 0..1, source: '…' }`.
-  Since 1.1.0-beta.2 an HDR video that is shown as SDR comes with `profile: 'sdr'`, its HDR `kind` and an extra field
+  Since 1.1.0 an HDR video that is shown as SDR comes with `profile: 'sdr'`, its HDR `kind` and an extra field
   `screen: 'display' | 'player' | 'screen'` (the reason); without that field the event looks as before.
 - `window.AdaptiveSubs`: `version`, `state` (current profile), `set('hdr' | 'sdr')`, `toggle()`, `detect(text)`, `kind(text)`,
-  `screen()` (since 1.1.0-beta.2: `{ mode, tv, range, decoder, blocks }` — what the Display check sees).
+  `screen()` (since 1.1.0: `{ mode, tv, range, decoder, blocks }` — what the Display check sees).
 - Shared ffprobe cache `window.__lampa_ffp__` (v1): `get(base, hash, index, authHeader, timeoutMs) → Promise<{ status, json }>`;
   an existing implementation is never replaced.
 

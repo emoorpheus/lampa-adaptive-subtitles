@@ -2,7 +2,7 @@
 
 [Russian version](tv-checklist.ru.md)
 
-Tested so far: LG OLED65M59LA (webOS 25, version 1.0.0) and Tanix TX9 (Android TV box, Lampa Android app, version 1.1.0-beta.2) —
+Tested so far: LG OLED65M59LA (webOS 25, version 1.1.0) and Tanix TX9 (Android TV box, Lampa Android app, version 1.1.0-beta.2) —
 see README → Tested devices. Reports from other devices are very welcome, especially Samsung Tizen, other Android TV boxes and older
 webOS versions. These steps make a report useful. Please remove IP addresses and logins from screenshots and logs.
 
