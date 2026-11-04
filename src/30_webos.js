@@ -128,6 +128,7 @@
     function webosCall(method, parameters, mediaId) {
         if (!webosOrigRequest || !mediaId) return;
         parameters.mediaId = mediaId;
+        log('webOS', method, parameters.charOpacity !== undefined ? 'charOpacity ' + parameters.charOpacity : (parameters.fontSize !== undefined ? 'fontSize ' + parameters.fontSize : ''));
         webosOrigRequest.call(window.webOS.service, 'luna://com.webos.media', {
             method: method,
             parameters: parameters,

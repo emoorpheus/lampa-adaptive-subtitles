@@ -119,7 +119,8 @@
         // «Dolby Vision по названию; экран без HDR»
         if (!extra && current.screen) why = (KIND_NAMES[current.kind] || 'HDR') + (why ? ' ' + why : '') + '; ' + sourceName(current.screen);
         if (why) text += ' (' + why + ')';
-        try { Lampa.Noty.show(text); } catch (e) { log(text); }
+        log('Notice:', text);
+        try { Lampa.Noty.show(text); } catch (e) {}
     }
 
     // ---------- Ручной выбор HDR/SDR: для раздачи (по хешу) или для сериала/фильма ----------
@@ -181,6 +182,7 @@
         if (this.best && prio <= this.best.prio) return false;
         var was = this.announced !== null ? current.profile : null;
         this.best = { kind: kind, source: source, prio: prio };
+        log('Detected', kind, 'from', source);
         applyKind(kind, source);
         if (was !== null && !this.refined && current.profile !== was) {
             this.refined = true;
@@ -192,7 +194,12 @@
     Resolver.prototype.wait = function (promise, source) {
         var self = this;
         this.pending++;
-        promise.then(function (kind) { self.offer(kind, source); }, function () {}).then(function () {
+        promise.then(function (kind) {
+            if (!kind && self.alive()) log(source + ': nothing found');
+            self.offer(kind, source);
+        }, function (err) {
+            if (self.alive()) log(source + ': failed', err && (err.status || err.message) ? (err.status || err.message) : '');
+        }).then(function () {
             self.pending--;
             if (!self.pending) self.flush();
         });
@@ -208,6 +215,8 @@
         clearTimeout(this.timer);
         if (!this.alive() || this.announced !== null) return;
         this.announced = current.profile;
+        log('Profile', current.profile + (current.profile === 'hdr' ? ' ' + Math.round(current.brightness * 100) + '%' : ''), '| kind', current.kind,
+            '| source', current.source || '-', current.screen ? '| HDR shown as SDR (' + current.screen + ')' : '');
         if (this.notify) announce(false);
     };
 
@@ -270,6 +279,7 @@
         lookupToken++;                          // поздние уточнения не перебьют выбор пользователя
         Resolver.active = null;
         if (key) setOverride(key, next);
+        log('HDR/SDR key:', next, key ? '(remembered for the ' + (key.charAt(0) === 'h' ? 'torrent' : 'title') + ')' : '');
         applyKind(next === 'hdr' ? (isHdrKind(current.detected) ? current.detected : 'hdr') : 'sdr', 'override');
         announce(false, key ? tr(key.charAt(0) === 'h' ? 'why_release' : 'why_title') : tr('src_manual'));
         return next;
@@ -295,12 +305,30 @@
         } catch (e) { return false; }
     }
 
+    // Нажата клавиша HDR/SDR и открыт плеер
+    function isOurKey(code, ev) {
+        var want = KEY_CODES[opt('adaptive_subs_key')];
+        return !!want && keyCodeOf(code, ev) === want && playerActive();
+    }
+
     function bindKey() {
+        // LG webOS: Lampa сама слушает цветные кнопки в Keypad и меняет встроенные субтитры телевизора (403 — размер,
+        // 404 — положение, 405 — цвет, 406 — фон; Lampa 3.4.4, app.min.js#L7529-L7536). preventDefault её не останавливает,
+        // поэтому в плеере забираем свою клавишу раньше Keypad (window, фаза перехвата) и дальше событие не передаём.
+        if (isWebos() && typeof window.addEventListener === 'function') {
+            window.addEventListener('keydown', function (ev) {
+                if (!ev || !isOurKey(ev.keyCode || ev.which, ev)) return;
+                ev.__adaptiveSubsKey = true;
+                if (typeof ev.preventDefault === 'function') ev.preventDefault();
+                if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation();
+                if (typeof ev.stopPropagation === 'function') ev.stopPropagation();
+                toggleProfile();
+            }, true);
+        }
         var kp = Lampa.Keypad && Lampa.Keypad.listener;
         if (!kp || typeof kp.follow !== 'function') return;
         kp.follow('keydown', function (e) {
-            var want = KEY_CODES[opt('adaptive_subs_key')];
-            if (!want || !e || keyCodeOf(e.code, e.event) !== want || !playerActive()) return;
+            if (!e || (e.event && e.event.__adaptiveSubsKey) || !isOurKey(e.code, e.event)) return;
             toggleProfile();
             if (e.event && typeof e.event.preventDefault === 'function') e.event.preventDefault();
         });
@@ -316,7 +344,10 @@
 
     // start приходит и при первом запуске, и при выборе серии в плейлисте
     function onStart(data) {
-        var sess = ++session;
+        var sess = ++session, info = describeData(data || playdata());
+        lastPlayback = Date.now();
+        log('Playback start |', info.torr ? 'TorrServer' : (info.hls ? 'HLS' : 'video'), '| mode', opt('adaptive_subs_mode'),
+            data && data.ffprobe ? '| ffprobe in data' : '');
         try { evaluate(data || playdata(), true); } catch (e) { log(e && e.message); }
         watchMedia(sess);
     }

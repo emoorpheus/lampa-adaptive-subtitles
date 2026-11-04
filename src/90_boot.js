@@ -58,7 +58,10 @@
             I18n: I18n,
             I18N: I18N,
             I18N_LANGS: I18N_LANGS,
-            tr: tr
+            tr: tr,
+            Journal: Journal,
+            Report: Report,
+            scrub: scrub
         }
     };
 

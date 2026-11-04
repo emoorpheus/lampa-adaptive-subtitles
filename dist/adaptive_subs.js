@@ -1,5 +1,5 @@
 /*!
- * Adaptive Subtitles for Lampa v1.1.0 (MIT License)
+ * Adaptive Subtitles for Lampa v1.1.1 (MIT License)
  * HDR / Dolby Vision / HLG video -> subtitles are dimmed (no glare on OLED screens); SDR -> as in Lampa.
  * Dimming is applied only when HDR can actually be shown: not on an SDR display (dynamic-range) and not in a built-in
  * player that cannot play HDR video (for example, an Android box with an old WebView); "Display" setting.
@@ -20,7 +20,7 @@
     if (window.adaptive_subs_plugin) return;
     window.adaptive_subs_plugin = true;
 
-    var VERSION = "1.1.0";
+    var VERSION = "1.1.1";
     var STYLE_ID = 'adaptive-subs-style';
     var QUICK_WAIT = 1500;          // мс: ждём быстрые источники (название раздачи, HLS) до первого уведомления
     var NET_TIMEOUT = 4000;
@@ -71,12 +71,87 @@
     }
 
     function log() {
+        var args = Array.prototype.slice.call(arguments);
+        try { Journal.add(args); } catch (e) {}
         try {
-            var args = Array.prototype.slice.call(arguments);
             args.unshift('AdaptiveSubs');
             console.log.apply(console, args);
         } catch (e) {}
     }
+
+    // Строка журнала для экрана «Отчёт»: без адресов, IP, e-mail, путей и имён файлов, хешей и ключей
+    // (так же, как в плагине «Пропуск заставок»)
+    function scrub(text) {
+        var s = String(text === undefined || text === null ? '' : text);
+        s = s.replace(/\b[a-z][a-z0-9+.\-]{1,15}:\/\/[^\s"'<>]+/gi, '<url>')
+            .replace(/\bmagnet:\?[^\s"'<>]+/gi, '<url>')
+            .replace(/[\w.+\-]+@[\w\-]+(?:\.[\w\-]+)+/g, '<email>')
+            .replace(/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?\b/g, '<ip>')
+            .replace(/\[[0-9a-f:]{6,}\](?::\d{1,5})?/gi, '<ip>')
+            .replace(/\blocalhost(?::\d{1,5})?\b/gi, '<host>')
+            .replace(/\b[\w.\-]+\.(?:local|lan|home|internal|localdomain)(?::\d{1,5})?\b/gi, '<host>')
+            .replace(/[^\s"'<>\/\\|]*\.(?:mkv|mp4|m4v|avi|ts|m2ts|mts|mov|webm|wmv|flv|mpe?g|m3u8?|mpd|srt|vtt|ass|ssa|sub|idx|sup|torrent)\b/gi, '<file>')
+            .replace(/(^|[\s(=])(?:\/|[a-z]:\\)[^\s"'<>]+/gi, '$1<path>')
+            .replace(/\b(api[_\-]?key|access[_\-]?token|token|password|passwd|secret|authorization|auth)(\s*[=:]\s*)[^\s&;,"']+/gi, '$1$2<hidden>')
+            .replace(/\b(key=)[^\s&;,"']+/gi, '$1<hidden>')
+            .replace(/\b[0-9a-f]{32,}\b/gi, '<hash>')
+            .replace(/[A-Za-z0-9+\/_\-]{40,}={0,2}/g, '<id>');
+        return s.length > 300 ? s.slice(0, 299) + '\u2026' : s;
+    }
+
+    // ---------- Журнал для экрана «Отчёт» ----------
+    // Последние строки лога без адресов, имён файлов и ключей. Хранятся и в localStorage:
+    // телевизор часто закрывает приложение целиком, а отчёт открывают уже после перезапуска
+    var JOURNAL_KEY = 'adaptive_subs_journal';
+    var JOURNAL_MAX = 40;
+    var Journal = {
+        _list: null,
+        _timer: null,
+
+        list: function () {
+            if (this._list) return this._list;
+            var saved = null, out = [];
+            try { saved = JSON.parse(window.localStorage.getItem(JOURNAL_KEY) || 'null'); } catch (e) {}
+            if (saved instanceof Array) {
+                for (var i = 0; i < saved.length; i++) {
+                    var x = saved[i];
+                    if (x && typeof x.t === 'number' && typeof x.m === 'string') out.push({ t: x.t, m: scrub(x.m) });
+                }
+            }
+            this._list = out.slice(-JOURNAL_MAX);
+            return this._list;
+        },
+
+        _text: function (args) {
+            var out = [];
+            for (var i = 0; i < args.length; i++) {
+                var a = args[i];
+                if (typeof a === 'string') out.push(a);
+                else if (a instanceof Error) out.push(a.message);
+                else if (a && typeof a === 'object') {
+                    try { out.push(JSON.stringify(a)); } catch (e) { out.push(String(a)); }
+                } else out.push(String(a));
+            }
+            return out.join(' ').replace(/\s+$/, '');
+        },
+
+        add: function (args) {
+            var list = this.list(), self = this;
+            list.push({ t: Date.now(), m: scrub(this._text(args)) });
+            if (list.length > JOURNAL_MAX) list.splice(0, list.length - JOURNAL_MAX);
+            if (this._timer) return;
+            this._timer = setTimeout(function () { self._timer = null; self.save(); }, 3000);
+        },
+
+        save: function () {
+            try { window.localStorage.setItem(JOURNAL_KEY, JSON.stringify(this.list())); } catch (e) {}
+        },
+
+        last: function (n) {
+            var list = this.list();
+            return list.slice(Math.max(0, list.length - n));
+        }
+    };
 
     function isHdrKind(kind) {
         return kind === 'hdr' || kind === 'hdr10' || kind === 'dv' || kind === 'hlg';
@@ -197,7 +272,20 @@
         set_forget: { ru: 'Забыть ручные выборы HDR/SDR', en: 'Forget manual HDR/SDR choices' },
         set_forget_d: { ru: 'Снова определять автоматически', en: 'Detect automatically again' },
         set_notify: { ru: 'Уведомление при старте', en: 'Notification on start' },
-        set_notify_d: { ru: 'Какой профиль включился и почему; второе — только если точная проверка его сменила', en: 'Which profile was applied and why; a second one only if the exact check changed it' }
+        set_notify_d: { ru: 'Какой профиль включился и почему; второе — только если точная проверка его сменила', en: 'Which profile was applied and why; a second one only if the exact check changed it' },
+        set_report: { ru: 'Отчёт для разработчика', en: 'Report for the developer' },
+        set_report_d: { ru: 'Версия, устройство, экран, последнее видео и журнал на одном экране: сфотографируйте его и пришлите разработчику. Ничего не отправляется; адреса серверов, названия файлов и ключи не показываются', en: 'Version, device, display, last video and the log on one screen: take a photo and send it to the developer. Nothing is sent; server addresses, file names and keys are not shown' },
+        report_title: { ru: 'Адаптивные субтитры — отчёт', en: 'Adaptive Subtitles — report' },
+        report_hint: { ru: 'Сфотографируйте экран; стрелки вверх и вниз — прокрутка. Адреса серверов, названия файлов и ключи скрыты', en: 'Take a photo of the screen; use the up and down arrows to scroll. Server addresses, file names and keys are hidden' },
+        report_device: { ru: 'Версия и устройство', en: 'Version and device' },
+        report_screen: { ru: 'Экран и плеер', en: 'Display and player' },
+        report_last: { ru: 'Последнее видео', en: 'Last video' },
+        report_none: { ru: 'ещё не было просмотра', en: 'no playback yet' },
+        report_settings: { ru: 'Изменённые настройки', en: 'Changed settings' },
+        report_defaults: { ru: 'все по умолчанию', en: 'all default' },
+        report_log: { ru: 'Журнал (последние {n})', en: 'Log (last {n})' },
+        report_log_empty: { ru: 'журнал пуст', en: 'the log is empty' },
+        report_na: { ru: 'Окно отчёта недоступно в этой версии Lampa', en: 'The report window is not available in this Lampa version' }
     };
 
     var I18n = {
@@ -638,6 +726,7 @@
     function webosCall(method, parameters, mediaId) {
         if (!webosOrigRequest || !mediaId) return;
         parameters.mediaId = mediaId;
+        log('webOS', method, parameters.charOpacity !== undefined ? 'charOpacity ' + parameters.charOpacity : (parameters.fontSize !== undefined ? 'fontSize ' + parameters.fontSize : ''));
         webosOrigRequest.call(window.webOS.service, 'luna://com.webos.media', {
             method: method,
             parameters: parameters,
@@ -880,7 +969,8 @@
         // «Dolby Vision по названию; экран без HDR»
         if (!extra && current.screen) why = (KIND_NAMES[current.kind] || 'HDR') + (why ? ' ' + why : '') + '; ' + sourceName(current.screen);
         if (why) text += ' (' + why + ')';
-        try { Lampa.Noty.show(text); } catch (e) { log(text); }
+        log('Notice:', text);
+        try { Lampa.Noty.show(text); } catch (e) {}
     }
 
     // ---------- Ручной выбор HDR/SDR: для раздачи (по хешу) или для сериала/фильма ----------
@@ -942,6 +1032,7 @@
         if (this.best && prio <= this.best.prio) return false;
         var was = this.announced !== null ? current.profile : null;
         this.best = { kind: kind, source: source, prio: prio };
+        log('Detected', kind, 'from', source);
         applyKind(kind, source);
         if (was !== null && !this.refined && current.profile !== was) {
             this.refined = true;
@@ -953,7 +1044,12 @@
     Resolver.prototype.wait = function (promise, source) {
         var self = this;
         this.pending++;
-        promise.then(function (kind) { self.offer(kind, source); }, function () {}).then(function () {
+        promise.then(function (kind) {
+            if (!kind && self.alive()) log(source + ': nothing found');
+            self.offer(kind, source);
+        }, function (err) {
+            if (self.alive()) log(source + ': failed', err && (err.status || err.message) ? (err.status || err.message) : '');
+        }).then(function () {
             self.pending--;
             if (!self.pending) self.flush();
         });
@@ -969,6 +1065,8 @@
         clearTimeout(this.timer);
         if (!this.alive() || this.announced !== null) return;
         this.announced = current.profile;
+        log('Profile', current.profile + (current.profile === 'hdr' ? ' ' + Math.round(current.brightness * 100) + '%' : ''), '| kind', current.kind,
+            '| source', current.source || '-', current.screen ? '| HDR shown as SDR (' + current.screen + ')' : '');
         if (this.notify) announce(false);
     };
 
@@ -1031,6 +1129,7 @@
         lookupToken++;                          // поздние уточнения не перебьют выбор пользователя
         Resolver.active = null;
         if (key) setOverride(key, next);
+        log('HDR/SDR key:', next, key ? '(remembered for the ' + (key.charAt(0) === 'h' ? 'torrent' : 'title') + ')' : '');
         applyKind(next === 'hdr' ? (isHdrKind(current.detected) ? current.detected : 'hdr') : 'sdr', 'override');
         announce(false, key ? tr(key.charAt(0) === 'h' ? 'why_release' : 'why_title') : tr('src_manual'));
         return next;
@@ -1056,12 +1155,30 @@
         } catch (e) { return false; }
     }
 
+    // Нажата клавиша HDR/SDR и открыт плеер
+    function isOurKey(code, ev) {
+        var want = KEY_CODES[opt('adaptive_subs_key')];
+        return !!want && keyCodeOf(code, ev) === want && playerActive();
+    }
+
     function bindKey() {
+        // LG webOS: Lampa сама слушает цветные кнопки в Keypad и меняет встроенные субтитры телевизора (403 — размер,
+        // 404 — положение, 405 — цвет, 406 — фон; Lampa 3.4.4, app.min.js#L7529-L7536). preventDefault её не останавливает,
+        // поэтому в плеере забираем свою клавишу раньше Keypad (window, фаза перехвата) и дальше событие не передаём.
+        if (isWebos() && typeof window.addEventListener === 'function') {
+            window.addEventListener('keydown', function (ev) {
+                if (!ev || !isOurKey(ev.keyCode || ev.which, ev)) return;
+                ev.__adaptiveSubsKey = true;
+                if (typeof ev.preventDefault === 'function') ev.preventDefault();
+                if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation();
+                if (typeof ev.stopPropagation === 'function') ev.stopPropagation();
+                toggleProfile();
+            }, true);
+        }
         var kp = Lampa.Keypad && Lampa.Keypad.listener;
         if (!kp || typeof kp.follow !== 'function') return;
         kp.follow('keydown', function (e) {
-            var want = KEY_CODES[opt('adaptive_subs_key')];
-            if (!want || !e || keyCodeOf(e.code, e.event) !== want || !playerActive()) return;
+            if (!e || (e.event && e.event.__adaptiveSubsKey) || !isOurKey(e.code, e.event)) return;
             toggleProfile();
             if (e.event && typeof e.event.preventDefault === 'function') e.event.preventDefault();
         });
@@ -1077,7 +1194,10 @@
 
     // start приходит и при первом запуске, и при выборе серии в плейлисте
     function onStart(data) {
-        var sess = ++session;
+        var sess = ++session, info = describeData(data || playdata());
+        lastPlayback = Date.now();
+        log('Playback start |', info.torr ? 'TorrServer' : (info.hls ? 'HLS' : 'video'), '| mode', opt('adaptive_subs_mode'),
+            data && data.ffprobe ? '| ffprobe in data' : '');
         try { evaluate(data || playdata(), true); } catch (e) { log(e && e.message); }
         watchMedia(sess);
     }
@@ -1182,7 +1302,141 @@
             } });
         add({ name: 'adaptive_subs_notify', type: 'trigger', default: true },
             { name: tr('set_notify'), description: tr('set_notify_d') });
+        add({ name: 'adaptive_subs_report', type: 'button' },
+            { name: tr('set_report'), description: tr('set_report_d') },
+            { onChange: function () { Report.open(); } });
     }
+
+
+    // ---------- Отчёт для разработчика: всё для разбора проблемы на одном экране ----------
+    // Пользователь фотографирует экран и присылает снимок: плагин ничего не отправляет. Адреса серверов, имена файлов
+    // и ключи в отчёт не попадают: журнал проходит scrub(), настройки — только значения из списка вариантов
+    var REPORT_LOG = 30;
+    var REPORT_CSS_ID = 'adaptive-subs-report-style';
+    var REPORT_CSS = '.adaptive-subs-report{font-size:1.35em;line-height:1.4;padding-bottom:1em}' +
+        '.adaptive-subs-report__hint{opacity:.75;margin-bottom:.3em}.adaptive-subs-report__h{font-weight:700;margin-top:.8em}' +
+        '.adaptive-subs-report__l,.adaptive-subs-report__log{white-space:pre-wrap;word-wrap:break-word}' +
+        '.adaptive-subs-report__log{font-family:monospace;font-size:.85em;line-height:1.35}';
+    var lastPlayback = 0;        // время последнего запуска видео (для «Последнее видео» в отчёте)
+
+    function pad2(n) {
+        return n < 10 ? '0' + n : String(n);
+    }
+
+    var Report = {
+        stamp: function (t, withDate) {
+            var d = new Date(t);
+            var hm = pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+            return withDate ? pad2(d.getDate()) + '.' + pad2(d.getMonth() + 1) + ' ' + hm : hm;
+        },
+
+        // «Lampa 3.4.4 · webos · webOS · Chrome 108 · 1920×1080»
+        device: function () {
+            var ua = '', parts = [], m, app = '';
+            try { ua = String(navigator.userAgent || ''); } catch (e) {}
+            try { app = Lampa.Platform.version('app'); } catch (e) {}
+            if (!app) try { app = Lampa.Manifest.app_version; } catch (e) {}
+            parts.push('Lampa ' + (app || '?'));
+            try { var pl = Lampa.Platform.get(); if (pl) parts.push(String(pl)); } catch (e) {}
+            try { if (typeof AndroidJS !== 'undefined' && AndroidJS.appVersion) parts.push('app ' + AndroidJS.appVersion()); } catch (e) {}
+            if ((m = ua.match(/Android [\d.]+/))) parts.push(m[0]);
+            else if ((m = ua.match(/Tizen [\d.]+/))) parts.push(m[0]);
+            else if (/Web0S|webOS/i.test(ua)) parts.push('webOS');
+            else if ((m = ua.match(/Windows NT [\d.]+|Mac OS X [\d_]+|CrOS|Linux/))) parts.push(m[0].replace(/_/g, '.'));
+            if ((m = ua.match(/(?:Chrome|Chromium)\/(\d+)/))) parts.push('Chrome ' + m[1]);
+            else if ((m = ua.match(/Firefox\/(\d+)/))) parts.push('Firefox ' + m[1]);
+            else if ((m = ua.match(/AppleWebKit\/([\d.]+)/))) parts.push('WebKit ' + m[1]);
+            try {
+                var dpr = window.devicePixelRatio;
+                if (window.innerWidth > 0) parts.push(window.innerWidth + '\u00d7' + window.innerHeight + (dpr && dpr !== 1 ? ' @' + Math.round(dpr * 100) / 100 + 'x' : ''));
+            } catch (e) {}
+            return scrub(parts.join(' \u00b7 '));
+        },
+
+        // «display: high · HDR decoder: yes · TV: yes · setting: auto»
+        screen: function () {
+            var s = screenInfo();
+            return 'display: ' + (s.range || 'unknown') + ' \u00b7 HDR decoder: ' + (s.decoder === null ? 'unknown' : (s.decoder ? 'yes' : 'no')) +
+                ' \u00b7 TV: ' + (s.tv ? 'yes' : 'no') + ' \u00b7 setting: ' + s.mode + (s.blocks ? ' \u00b7 HDR shown as SDR: ' + s.blocks : '') +
+                (webosOrigRequest ? ' \u00b7 webOS: Lampa opacity ' + lampaOpacity + ', plugin ' + webosOpacity() : '');
+        },
+
+        // «profile: hdr · kind: dv · subtitles 48% · source: ffprobe · detected: dv · manual choice: no»
+        last: function () {
+            if (!lastPlayback) return tr('report_none');
+            var c = current;
+            return 'profile: ' + c.profile + ' \u00b7 kind: ' + c.kind + ' \u00b7 subtitles ' + Math.round(c.brightness * 100) + '%' +
+                ' \u00b7 source: ' + (c.source || '\u2014') + ' \u00b7 detected: ' + c.detected + (c.screen ? ' \u00b7 shown as SDR: ' + c.screen : '') +
+                ' \u00b7 manual choice: ' + (c.key && getOverride(c.key) ? getOverride(c.key) : 'no') + ' \u00b7 ' + this.stamp(lastPlayback, true);
+        },
+
+        // Только отличающиеся от значения по умолчанию: «screen: sdr · key: yellow»
+        settings: function () {
+            var out = [];
+            for (var k in DEFAULTS) {
+                if (!DEFAULTS.hasOwnProperty(k)) continue;
+                var v = opt(k);
+                if (String(v) === String(DEFAULTS[k])) continue;
+                out.push(k.replace(/^adaptive_subs_/, '') + ': ' + scrub(String(v)));
+            }
+            return out;
+        },
+
+        // [{ c: 'hint' | 'h' | 'l' | 'log', t: текст }]
+        lines: function () {
+            var out = [], today = new Date(Date.now()).toDateString(), self = this;
+            function add(c, t) { out.push({ c: c, t: String(t) }); }
+            add('hint', tr('report_hint'));
+            add('h', tr('report_device'));
+            add('l', 'Adaptive Subtitles ' + VERSION + ' \u00b7 ' + this.device() + ' \u00b7 ' + this.stamp(Date.now(), true));
+            add('h', tr('report_screen'));
+            add('l', this.screen());
+            add('h', tr('report_last'));
+            add('l', this.last());
+            add('h', tr('report_settings'));
+            add('l', this.settings().join(' \u00b7 ') || tr('report_defaults'));
+            var list = Journal.last(REPORT_LOG);
+            add('h', tr('report_log', { n: list.length }));
+            if (!list.length) add('l', tr('report_log_empty'));
+            for (var i = 0; i < list.length; i++) add('log', self.stamp(list[i].t, new Date(list[i].t).toDateString() !== today) + ' ' + list[i].m);
+            return out;
+        },
+
+        open: function () {
+            var jq = window.jQuery || window.$;
+            if (!jq || !Lampa.Modal || typeof Lampa.Modal.open !== 'function') {
+                try { Lampa.Noty.show(tr('report_na')); } catch (e) {}
+                return;
+            }
+            if (!document.getElementById(REPORT_CSS_ID)) {
+                var style = document.createElement('style');
+                style.id = REPORT_CSS_ID;
+                style.textContent = REPORT_CSS;
+                document.head.appendChild(style);
+            }
+            var root = document.createElement('div'), list = this.lines(), prev = 'settings_component';
+            root.className = 'adaptive-subs-report';
+            for (var i = 0; i < list.length; i++) {
+                var el = document.createElement('div');
+                el.className = 'adaptive-subs-report__' + list[i].c;
+                el.textContent = list[i].t;
+                root.appendChild(el);
+            }
+            try {
+                var en = Lampa.Controller.enabled();
+                if (en && typeof en.name === 'string' && en.name) prev = en.name;
+            } catch (e) {}
+            Lampa.Modal.open({
+                title: tr('report_title'),
+                html: jq(root),
+                size: 'large',
+                onBack: function () {
+                    try { Lampa.Modal.close(); } catch (e) {}
+                    try { Lampa.Controller.toggle(prev); } catch (e) {}
+                }
+            });
+        }
+    };
 
 
     // ---------- Инициализация ----------
@@ -1244,7 +1498,10 @@
             I18n: I18n,
             I18N: I18N,
             I18N_LANGS: I18N_LANGS,
-            tr: tr
+            tr: tr,
+            Journal: Journal,
+            Report: Report,
+            scrub: scrub
         }
     };
 

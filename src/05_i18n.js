@@ -113,7 +113,20 @@
         set_forget: { ru: 'Забыть ручные выборы HDR/SDR', en: 'Forget manual HDR/SDR choices' },
         set_forget_d: { ru: 'Снова определять автоматически', en: 'Detect automatically again' },
         set_notify: { ru: 'Уведомление при старте', en: 'Notification on start' },
-        set_notify_d: { ru: 'Какой профиль включился и почему; второе — только если точная проверка его сменила', en: 'Which profile was applied and why; a second one only if the exact check changed it' }
+        set_notify_d: { ru: 'Какой профиль включился и почему; второе — только если точная проверка его сменила', en: 'Which profile was applied and why; a second one only if the exact check changed it' },
+        set_report: { ru: 'Отчёт для разработчика', en: 'Report for the developer' },
+        set_report_d: { ru: 'Версия, устройство, экран, последнее видео и журнал на одном экране: сфотографируйте его и пришлите разработчику. Ничего не отправляется; адреса серверов, названия файлов и ключи не показываются', en: 'Version, device, display, last video and the log on one screen: take a photo and send it to the developer. Nothing is sent; server addresses, file names and keys are not shown' },
+        report_title: { ru: 'Адаптивные субтитры — отчёт', en: 'Adaptive Subtitles — report' },
+        report_hint: { ru: 'Сфотографируйте экран; стрелки вверх и вниз — прокрутка. Адреса серверов, названия файлов и ключи скрыты', en: 'Take a photo of the screen; use the up and down arrows to scroll. Server addresses, file names and keys are hidden' },
+        report_device: { ru: 'Версия и устройство', en: 'Version and device' },
+        report_screen: { ru: 'Экран и плеер', en: 'Display and player' },
+        report_last: { ru: 'Последнее видео', en: 'Last video' },
+        report_none: { ru: 'ещё не было просмотра', en: 'no playback yet' },
+        report_settings: { ru: 'Изменённые настройки', en: 'Changed settings' },
+        report_defaults: { ru: 'все по умолчанию', en: 'all default' },
+        report_log: { ru: 'Журнал (последние {n})', en: 'Log (last {n})' },
+        report_log_empty: { ru: 'журнал пуст', en: 'the log is empty' },
+        report_na: { ru: 'Окно отчёта недоступно в этой версии Lampa', en: 'The report window is not available in this Lampa version' }
     };
 
     var I18n = {

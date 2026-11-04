@@ -231,13 +231,23 @@
     G.self = G;
     G.navigator = { userAgent: 'Mozilla/5.0 (test) LampaTest' };
     G.location = { href: B.origin + '/', origin: B.origin, protocol: B.origin.split(':')[0] + ':' };
-    var winLs = {};
-    G.addEventListener = function (type, fn) { (winLs[type] = winLs[type] || []).push(fn); };
-    G.removeEventListener = function (type, fn) { var l = winLs[type]; if (l && l.indexOf(fn) >= 0) l.splice(l.indexOf(fn), 1); };
+    var winLs = {}, winCap = {};
+    // третий аргумент true / { capture: true } — фаза перехвата: такие обработчики идут раньше остальных
+    G.addEventListener = function (type, fn, opt) {
+        var ls = (opt === true || (opt && opt.capture)) ? winCap : winLs;
+        (ls[type] = ls[type] || []).push(fn);
+    };
+    G.removeEventListener = function (type, fn) {
+        [winCap, winLs].forEach(function (ls) { var l = ls[type]; if (l && l.indexOf(fn) >= 0) l.splice(l.indexOf(fn), 1); });
+    };
     G.dispatchEvent = function (ev) {
-        (winLs[ev.type] || []).slice().forEach(function (fn) { try { fn.call(G, ev); } catch (e) { B.error(e, 'window listener'); } });
+        var list = (winCap[ev.type] || []).concat(winLs[ev.type] || []);
+        for (var i = 0; i < list.length && !ev._stopped; i++) {
+            try { list[i].call(G, ev); } catch (e) { B.error(e, 'window listener'); }
+        }
         return !ev.defaultPrevented;
     };
+    G.__winCapture = function (type) { return (winCap[type] || []).length; };
     G.CustomEvent = function CustomEvent(type, init) { this.type = type; this.detail = init && init.detail; };
     G.crypto = { getRandomValues: function (arr) { B.random(arr); return arr; } };
     G.btoa = B.btoa;
@@ -505,14 +515,24 @@
             if (video && video.parentNode) video.parentNode.removeChild(video);
             video = null;
         },
-        // Lampa core/keypad.js: keydown -> listener; если не defaultPrevented — действие Lampa; keyup -> OK
+        // Событие клавиши идёт сначала в обработчики window в фазе перехвата; если его не остановили — в Lampa
+        // core/keypad.js (обработчики window без перехвата): keydown -> listener; если не defaultPrevented — действие Lampa;
+        // keyup -> OK. На webOS Lampa ещё до плагинов слушает в Keypad цветные кнопки и 7/9 и меняет встроенные субтитры
+        // телевизора (app.min.js#L7529-L7536) — preventDefault это не останавливает (журнал webosSubKeys).
         key: function (code, phase, name) {
-            var ev = { key: name, defaultPrevented: false, preventDefault: function () { this.defaultPrevented = true; } };
+            var ev = { type: phase === 'keyup' ? 'keyup' : 'keydown', keyCode: code, which: code, key: name, defaultPrevented: false, _stopped: false,
+                preventDefault: function () { this.defaultPrevented = true; },
+                stopPropagation: function () { this._stopped = true; },
+                stopImmediatePropagation: function () { this._stopped = true; } };
+            var cap = (winCap[ev.type] || []).slice();
+            for (var i = 0; i < cap.length && !ev._stopped; i++) cap[i].call(G, ev);
+            if (ev._stopped) return ev.defaultPrevented;
             var enter = code === 13 || code === 29443 || code === 117 || code === 65385;
             if (phase === 'keyup') {
                 Keypad.listener.send('keyup', { code: code, enabled: true, event: ev });
                 if (enter && !ev.defaultPrevented) B.log.lampaKeys.push('enter');
             } else {
+                if (B.platform === 'webos' && [403, 404, 405, 406, 55, 57].indexOf(code) !== -1) B.log.webosSubKeys.push(code);
                 Keypad.listener.send('keydown', { code: code, enabled: true, event: ev });
                 if (!ev.defaultPrevented && !enter) B.log.lampaKeys.push('keydown:' + code);
             }

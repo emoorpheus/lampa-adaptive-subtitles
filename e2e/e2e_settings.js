@@ -2,6 +2,7 @@
 // через настоящие события Lampa ('hover:enter'), кнопка «Забыть ручные выборы HDR/SDR». Внешняя сеть — заглушки.
 const { open } = require('./lib');
 const assert = require('assert');
+const PKG = require('../package.json');
 const results = [];
 function check(name, fn) { try { fn(); results.push('✓ ' + name); } catch (e) { results.push('✗ ' + name + ' — ' + e.message.split('\n')[0]); } }
 
@@ -49,6 +50,39 @@ function check(name, fn) { try { fn(); results.push('✓ ' + name); } catch (e) 
     }));
     check('кнопка «Забыть ручные выборы HDR/SDR» очищает выборы', () => {
         assert.deepStrictEqual(forget.ov, {}); assert.ok(forget.noty.includes('Ручные выборы HDR/SDR забыты'), forget.noty);
+    });
+    // «Отчёт для разработчика»: окно Lampa.Modal крупным текстом, прокрутка стрелками, «Назад» — обратно в настройки
+    await env.ev(() => { $('.settings__body .settings-param[data-name="adaptive_subs_report"]').trigger('hover:enter'); });
+    await env.wait(600);
+    const rep = await env.ev(() => {
+        const m = document.querySelector('.modal');
+        const lines = Array.from(document.querySelectorAll('.modal .adaptive-subs-report > div')).map((d) => d.className.replace('adaptive-subs-report__', '') + ': ' + d.textContent);
+        const body = document.querySelector('.modal .adaptive-subs-report__l'), name = document.querySelector('.settings-param__name');
+        const sc = document.querySelector('.modal .scroll__content');
+        return { open: !!m, title: (document.querySelector('.modal__title') || {}).textContent, lines,
+            ctrl: Lampa.Controller.enabled().name, font: body ? parseFloat(getComputedStyle(body).fontSize) : 0,
+            settingsFont: name ? parseFloat(getComputedStyle(name).fontSize) : 0, scroll: sc ? [sc.scrollHeight, sc.clientHeight] : null };
+    });
+    console.log('report: ' + JSON.stringify({ title: rep.title, ctrl: rep.ctrl, font: rep.font, settingsFont: rep.settingsFont, scroll: rep.scroll, n: rep.lines.length }) + '\n  ' + rep.lines.join('\n  '));
+    await env.shot('e2e_report');
+    await env.page.keyboard.press('Escape');
+    await env.wait(500);
+    const after = await env.ev(() => ({ open: !!document.querySelector('.modal'), ctrl: Lampa.Controller.enabled().name,
+        settings: !!document.querySelector('.settings__body .settings-param[data-name="adaptive_subs_report"]') }));
+    check('«Отчёт для разработчика»: окно с версией, устройством, экраном, настройками и журналом крупным текстом', () => {
+        assert.ok(rep.open, 'окно открыто');
+        assert.strictEqual(rep.title, 'Адаптивные субтитры — отчёт');
+        assert.strictEqual(rep.ctrl, 'modal');
+        const t = rep.lines.join('\n');
+        assert.ok(t.indexOf('l: Adaptive Subtitles ' + PKG.version + ' · Lampa 3.4.4 · ') >= 0, t);
+        assert.ok(/h: Экран и плеер\nl: display: \w+ · HDR decoder: \w+ · TV: no · setting: auto[^\n]*\n/.test(t), t);
+        assert.ok(/h: Изменённые настройки\nl: mode: sdr\n/.test(t), t);
+        assert.ok(/h: Журнал \(последние \d+\)\nlog: \d\d:\d\d:\d\d v[\d.]+ initialized/.test(t), t);
+        assert.ok(!/127\.0\.0\.1|https?:\/\//.test(t), 'нет адресов');
+        assert.ok(rep.font > rep.settingsFont, 'текст крупнее пунктов настроек: ' + rep.font + ' > ' + rep.settingsFont);
+    });
+    check('«Отчёт»: «Назад» закрывает окно и возвращает в настройки', () => {
+        assert.deepStrictEqual(after, { open: false, ctrl: 'settings_component', settings: true });
     });
     check('ошибок JavaScript на странице нет', () => assert.deepStrictEqual(env.logs.filter((l) => l.startsWith('PAGEERROR')), []));
     console.log(results.join('\n'));

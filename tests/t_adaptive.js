@@ -539,6 +539,53 @@ test('webOS: старое <video> без mediaId первым в DOM (LG, «repe
     assert.strictEqual(calls(env).length, n);
 });
 
+test('webOS: клавиша HDR/SDR не доходит до Lampa (цвет/фон/размер встроенных субтитров) — только в плеере и только своя', async () => {
+    const env = aenv({ webos: true, settings: { adaptive_subs_key: 'yellow' } });
+    assert.strictEqual(env.W.__winCapture('keydown'), 1);
+    start(env, { title: 'Film.2160p.HDR.mkv', url: 'https://cdn.example/f.mp4' }, { mediaId: 'm1' });
+    await env.advance(600);
+    assert.strictEqual(env.A.state.profile, 'hdr');
+    // жёлтая в плеере: переключили один раз, Keypad (и обработчик Lampa на webOS) событие не получил
+    assert.strictEqual(env.T.key(405, 'keydown'), true);
+    assert.strictEqual(env.A.state.profile, 'sdr');
+    assert.deepStrictEqual(env.log.webosSubKeys, []);
+    assert.deepStrictEqual(env.log.lampaKeys, []);
+    assert.strictEqual(env.noty().pop(), 'Субтитры: SDR — обычные (вручную)');
+    assert.strictEqual(env.T.key(405, 'keyup'), false);
+    assert.strictEqual(env.T.key(405, 'keydown'), true);
+    assert.strictEqual(env.A.state.profile, 'hdr');
+    // другая цветная кнопка — дальше, к Lampa
+    assert.strictEqual(env.T.key(406, 'keydown'), false);
+    assert.deepStrictEqual(env.log.webosSubKeys, [406]);
+    assert.strictEqual(env.A.state.profile, 'hdr');
+    // открыто меню — жёлтая к Lampa, профиль не меняется
+    env.L.Controller._name = 'select';
+    assert.strictEqual(env.T.key(405, 'keydown'), false);
+    assert.deepStrictEqual(env.log.webosSubKeys, [406, 405]);
+    assert.strictEqual(env.A.state.profile, 'hdr');
+    env.L.Controller._name = 'player';
+    // клавиша выключена — всё к Lampa
+    env.L.Storage.set('adaptive_subs_key', 'none');
+    assert.strictEqual(env.T.key(405, 'keydown'), false);
+    assert.deepStrictEqual(env.log.webosSubKeys, [406, 405, 405]);
+    // плеер закрыт — к Lampa
+    env.L.Storage.set('adaptive_subs_key', 'yellow');
+    env.T.destroy();
+    assert.strictEqual(env.T.key(405, 'keydown'), false);
+    assert.deepStrictEqual(env.log.webosSubKeys, [406, 405, 405, 405]);
+});
+
+test('клавиша HDR/SDR не на webOS: перехвата нет, работает через Keypad Lampa, переключает один раз', async () => {
+    const env = aenv({ settings: { adaptive_subs_key: 'yellow' } });
+    assert.strictEqual(env.W.__winCapture('keydown'), 0);
+    start(env, { title: 'Film.2160p.HDR.mkv', url: 'https://cdn.example/f.mp4' });
+    await env.advance(600);
+    assert.strictEqual(env.A.state.profile, 'hdr');
+    assert.strictEqual(env.T.key(405, 'keydown'), true);
+    assert.strictEqual(env.A.state.profile, 'sdr');
+    assert.deepStrictEqual(env.log.lampaKeys, []);
+});
+
 test('webOS: сведения sourceInfo (эксперимент, выкл. по умолчанию) — журнал и явный признак; обработчик Lampa вызывается', async () => {
     const info = { sourceInfo: { programInfo: [{ numAudioTracks: 1, videoTrackInfo: [{ codec: 'HEVC', width: 3840, height: 2160, hdrType: 'HDR10' }] }] } };
     // выключено: subscribe не оборачиваем
@@ -593,6 +640,43 @@ test('поздний ответ прошлого запуска не переб�
     assert.strictEqual(env.A.state.profile, 'sdr');
     assert.strictEqual(env.A.state.source, 'name');
     assert.deepStrictEqual(env.errors.map((e) => e.where), []);
+});
+
+test('отчёт для разработчика: версия, экран, последнее видео, изменённые настройки и журнал без адресов; журнал в localStorage', async () => {
+    const env = aenv({ settings: Object.assign({ adaptive_subs_key: 'yellow', adaptive_subs_level_dv: '#555555' }, TS_SETTINGS) });
+    const R = env.A._test.Report, Jr = env.A._test.Journal;
+    const text0 = R.lines().map((l) => l.c + ': ' + l.t).join('\n');
+    assert.match(text0, /^hint: Сфотографируйте экран; стрелки вверх и вниз — прокрутка\. Адреса серверов, названия файлов и ключи скрыты\nh: Версия и устройство\n/);
+    assert.ok(text0.indexOf('l: Adaptive Subtitles ' + PKG.version + ' \u00b7 Lampa ') >= 0, text0);
+    assert.match(text0, /h: Экран и плеер\nl: display: unknown · HDR decoder: unknown · TV: no · setting: auto\n/);
+    assert.match(text0, /h: Последнее видео\nl: ещё не было просмотра\n/);
+    assert.match(text0, /h: Изменённые настройки\nl: level_dv: #555555 · key: yellow\n/);
+    ffpRoute(env, [V.dvP8, V.audio]);
+    start(env, { title: 'Movie.2160p.mkv', url: tsUrl('Movie.2160p.mkv'), torrent_hash: H });
+    await env.advance(3000);
+    Jr.add(['Test request http://203.0.113.10:8090/stream/Some.Movie.mkv token=abc123 failed']);
+    const text = R.lines().map((l) => l.c + ': ' + l.t).join('\n');
+    assert.match(text, /h: Последнее видео\nl: profile: hdr · kind: dv · subtitles 33% · source: ffprobe · detected: dv · manual choice: no · \d\d\.\d\d \d\d:\d\d:\d\d\n/);
+    assert.match(text, /\nlog: \d\d:\d\d:\d\d Playback start \| TorrServer \| mode auto\n/);
+    assert.match(text, /\nlog: \d\d:\d\d:\d\d Profile hdr 33% \| kind dv \| source ffprobe\n/);
+    assert.match(text, /\nlog: \d\d:\d\d:\d\d Test request <url> token=<hidden> failed$/);
+    assert.ok(!/203\.0\.113|torrserver\.test|Movie\.2160p|Some\.Movie|abc123|pa:ss|user/.test(text), 'в отчёте нет адресов, файлов, логина и ключей');
+    const log = text.split('\n').filter((l) => /^log: /.test(l));
+    assert.match(text, new RegExp('h: Журнал \\(последние ' + log.length + '\\)'));
+    await env.advance(3500);
+    const saved = JSON.parse(env.W.localStorage.getItem('adaptive_subs_journal'));
+    assert.strictEqual(saved.length, log.length, 'журнал сохранён для отчёта после перезапуска Lampa');
+    assert.ok(JSON.stringify(saved).indexOf('203.0.113') < 0);
+    for (let i = 0; i < 50; i++) Jr.add(['line ' + i]);
+    assert.strictEqual(Jr.list().length, 40, 'не больше 40 строк');
+    assert.strictEqual(R.lines().filter((l) => l.c === 'log').length, 30, 'в отчёте последние 30');
+    // после перезапуска Lampa журнал читается из localStorage
+    await env.advance(3500);
+    const env2 = aenv({ pre: (e) => e.W.localStorage.setItem('adaptive_subs_journal', env.W.localStorage.getItem('adaptive_subs_journal')) });
+    assert.strictEqual(env2.A._test.Journal.list().slice(-2)[0].m, 'line 49', 'старые строки на месте');
+    R.open();
+    assert.strictEqual(env.noty().pop(), 'Окно отчёта недоступно в этой версии Lampa', 'без Lampa.Modal — понятное сообщение');
+    assert.strictEqual(env.errors.length, 0, J(env.errors.map((e) => e.where + ' ' + e.e.message)));
 });
 
 run('adaptive_subs ' + PKG.version + ' — сценарии');

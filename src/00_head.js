@@ -71,12 +71,87 @@
     }
 
     function log() {
+        var args = Array.prototype.slice.call(arguments);
+        try { Journal.add(args); } catch (e) {}
         try {
-            var args = Array.prototype.slice.call(arguments);
             args.unshift('AdaptiveSubs');
             console.log.apply(console, args);
         } catch (e) {}
     }
+
+    // Строка журнала для экрана «Отчёт»: без адресов, IP, e-mail, путей и имён файлов, хешей и ключей
+    // (так же, как в плагине «Пропуск заставок»)
+    function scrub(text) {
+        var s = String(text === undefined || text === null ? '' : text);
+        s = s.replace(/\b[a-z][a-z0-9+.\-]{1,15}:\/\/[^\s"'<>]+/gi, '<url>')
+            .replace(/\bmagnet:\?[^\s"'<>]+/gi, '<url>')
+            .replace(/[\w.+\-]+@[\w\-]+(?:\.[\w\-]+)+/g, '<email>')
+            .replace(/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?\b/g, '<ip>')
+            .replace(/\[[0-9a-f:]{6,}\](?::\d{1,5})?/gi, '<ip>')
+            .replace(/\blocalhost(?::\d{1,5})?\b/gi, '<host>')
+            .replace(/\b[\w.\-]+\.(?:local|lan|home|internal|localdomain)(?::\d{1,5})?\b/gi, '<host>')
+            .replace(/[^\s"'<>\/\\|]*\.(?:mkv|mp4|m4v|avi|ts|m2ts|mts|mov|webm|wmv|flv|mpe?g|m3u8?|mpd|srt|vtt|ass|ssa|sub|idx|sup|torrent)\b/gi, '<file>')
+            .replace(/(^|[\s(=])(?:\/|[a-z]:\\)[^\s"'<>]+/gi, '$1<path>')
+            .replace(/\b(api[_\-]?key|access[_\-]?token|token|password|passwd|secret|authorization|auth)(\s*[=:]\s*)[^\s&;,"']+/gi, '$1$2<hidden>')
+            .replace(/\b(key=)[^\s&;,"']+/gi, '$1<hidden>')
+            .replace(/\b[0-9a-f]{32,}\b/gi, '<hash>')
+            .replace(/[A-Za-z0-9+\/_\-]{40,}={0,2}/g, '<id>');
+        return s.length > 300 ? s.slice(0, 299) + '\u2026' : s;
+    }
+
+    // ---------- Журнал для экрана «Отчёт» ----------
+    // Последние строки лога без адресов, имён файлов и ключей. Хранятся и в localStorage:
+    // телевизор часто закрывает приложение целиком, а отчёт открывают уже после перезапуска
+    var JOURNAL_KEY = 'adaptive_subs_journal';
+    var JOURNAL_MAX = 40;
+    var Journal = {
+        _list: null,
+        _timer: null,
+
+        list: function () {
+            if (this._list) return this._list;
+            var saved = null, out = [];
+            try { saved = JSON.parse(window.localStorage.getItem(JOURNAL_KEY) || 'null'); } catch (e) {}
+            if (saved instanceof Array) {
+                for (var i = 0; i < saved.length; i++) {
+                    var x = saved[i];
+                    if (x && typeof x.t === 'number' && typeof x.m === 'string') out.push({ t: x.t, m: scrub(x.m) });
+                }
+            }
+            this._list = out.slice(-JOURNAL_MAX);
+            return this._list;
+        },
+
+        _text: function (args) {
+            var out = [];
+            for (var i = 0; i < args.length; i++) {
+                var a = args[i];
+                if (typeof a === 'string') out.push(a);
+                else if (a instanceof Error) out.push(a.message);
+                else if (a && typeof a === 'object') {
+                    try { out.push(JSON.stringify(a)); } catch (e) { out.push(String(a)); }
+                } else out.push(String(a));
+            }
+            return out.join(' ').replace(/\s+$/, '');
+        },
+
+        add: function (args) {
+            var list = this.list(), self = this;
+            list.push({ t: Date.now(), m: scrub(this._text(args)) });
+            if (list.length > JOURNAL_MAX) list.splice(0, list.length - JOURNAL_MAX);
+            if (this._timer) return;
+            this._timer = setTimeout(function () { self._timer = null; self.save(); }, 3000);
+        },
+
+        save: function () {
+            try { window.localStorage.setItem(JOURNAL_KEY, JSON.stringify(this.list())); } catch (e) {}
+        },
+
+        last: function (n) {
+            var list = this.list();
+            return list.slice(Math.max(0, list.length - n));
+        }
+    };
 
     function isHdrKind(kind) {
         return kind === 'hdr' || kind === 'hdr10' || kind === 'dv' || kind === 'hlg';

@@ -13,11 +13,11 @@ Use this if you want Lampa to load the plugin from your own server instead of Gi
 ## 1. Download and verify
 
 ```sh
-VERSION=v1.1.0                   # or another release tag, for example v1.0.0
+VERSION=v1.1.1                   # or another release tag, for example v1.0.0
 curl -fsSLO "https://cdn.jsdelivr.net/gh/emoorpheus/lampa-adaptive-subtitles@$VERSION/dist/adaptive_subs.js"
 curl -fsSLO "https://cdn.jsdelivr.net/gh/emoorpheus/lampa-adaptive-subtitles@$VERSION/dist/SHA256SUMS"
 sha256sum -c SHA256SUMS          # macOS: shasum -a 256 -c SHA256SUMS
-head -c 120 adaptive_subs.js     # "Adaptive Subtitles for Lampa v1.1.0 …"
+head -c 120 adaptive_subs.js     # "Adaptive Subtitles for Lampa v1.1.1 …"
 ```
 
 ## 2. Install (keep a backup when updating)

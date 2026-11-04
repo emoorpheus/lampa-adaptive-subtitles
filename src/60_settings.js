@@ -92,4 +92,7 @@
             } });
         add({ name: 'adaptive_subs_notify', type: 'trigger', default: true },
             { name: tr('set_notify'), description: tr('set_notify_d') });
+        add({ name: 'adaptive_subs_report', type: 'button' },
+            { name: tr('set_report'), description: tr('set_report_d') },
+            { onChange: function () { Report.open(); } });
     }

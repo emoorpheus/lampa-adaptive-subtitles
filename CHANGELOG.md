@@ -6,6 +6,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-04
+
+A **Report for the developer** screen, and on LG webOS the HDR/SDR key no longer changes the subtitles drawn by the TV as well.
+The report was tested on a Tanix TX9 (Android TV); the LG webOS fix was checked by the maintainer on an LG OLED TV.
+
+### Added
+
+- Settings → Adaptive Subtitles → **Report for the developer** (the last item). The window (Lampa's own `Lampa.Modal`, text 1.35
+  times larger than the settings) shows:
+  - the plugin version, the Lampa version, the platform, the Android or Tizen version, the browser engine and the screen size;
+  - the display and the player: what the browser reports about the screen (`display: high | standard | unknown`), whether the
+    built-in player can play HDR (`HDR decoder`), the **Display** setting and, when HDR is shown as SDR, why; on LG webOS also the
+    subtitle opacity chosen in Lampa and the one set by the plugin;
+  - the last video: profile, HDR type, subtitle brightness, where the type came from, the manual HDR/SDR choice and the time;
+  - the settings changed from the defaults;
+  - the last 30 lines of the plugin's log.
+  Up and Down scroll the window, Back closes it and returns to the settings. Nothing is sent anywhere: the user takes a photo and
+  attaches it to an issue. Before a line is shown or stored, addresses (`<url>`), IPv4/IPv6 addresses (`<ip>`), local host names
+  (`<host>`), e-mail addresses (`<email>`), video and subtitle file names (`<file>`), paths (`<path>`), keys, tokens and passwords
+  (`<hidden>`) and long hashes or IDs (`<hash>`, `<id>`) are replaced; a line is cut at 300 characters. Lampa builds without
+  `Lampa.Modal` show the notice “The report window is not available in this Lampa version”.
+- The plugin's log is kept between Lampa restarts: the last 40 lines (already cleaned) are stored in `localStorage`
+  (`adaptive_subs_journal`, written at most every 3 s).
+- Log lines: `Playback start | TorrServer | HLS | video | mode …`, `Detected <type> from <source>`, `<source>: nothing found` or
+  `<source>: failed …`, `Profile hdr 48% | kind dv | source ffprobe`, `Notice: …` (the text of the notification),
+  `HDR/SDR key: hdr (remembered for the title)` and on LG webOS `webOS setSubtitleCharacterOpacity charOpacity …`.
+
+### Fixed
+
+- **LG webOS: the HDR/SDR key also changed the subtitles drawn by the TV.** In the player on webOS Lampa itself listens to all four
+  color keys and changes the embedded subtitles: red — size, green — position, yellow — color, blue — background
+  ([app.min.js](https://github.com/yumata/lampa/blob/4294a571aad8883116e57d975ad05519f84be13e/app.min.js#L7529-L7536)). `preventDefault` does not stop it. Now, on webOS and only while the player is open, the plugin takes its key
+  before Lampa (a `keydown` listener on `window` in the capture phase) and does not pass it on. Other keys, menus and the closed
+  player work as before; other platforms are unchanged. Side effect: on LG webOS the chosen key does not reach other plugins in the
+  player either, so give them different keys.
+
+### Tested
+
+- Unit tests on Node.js 24 (36 tests: 27 + 5 + 4; new: the report, the webOS key before Lampa, the key on other platforms) and
+  end-to-end tests in the Lampa 3.4.4 web build in Chromium (36 checks; new: the report opens from the settings, its text is larger
+  than the settings, Back returns to the settings). The new webOS key test fails on the 1.1.0 code and passes on 1.1.1.
+- **Tanix TX9** (Android 11, Lampa 3.4.4, WebView Chrome 156): the 1.1.1 file loaded in place of the installed one through the
+  WebView developer tools (the server copy was not changed). The start line was `display: standard | HDR decoder: yes | HDR shown as
+  SDR (display)`; a test video named HDR10 got SDR (HDR shown as SDR); the red key (sent with `adb` as `KEYCODE_PROG_RED`) switched
+  SDR → HDR 48 % → SDR, one step per press. The report opened from the settings and was readable on a 1080p screen capture, showed
+  the last video and the log, and Back (sent with `adb`) returned to the settings.
+- **LG OLED TV** (webOS 25): checked by the maintainer, no problems found.
+- Not tested on Samsung Tizen.
+
+### Known issues
+
+- The plugin cannot see whether a TV or box converts HDR to SDR by itself; then choose **Display → SDR only: do not dim**.
+- Samsung Tizen has not been reported yet; HLG has been checked only with a test video named HLG.
+
 ## [1.1.0] - 2026-11-04
 
 Stable release with the changes of the 1.1 betas — an English interface, the **Display** setting and color keys on Android TV
@@ -154,7 +208,8 @@ First public release.
   settings and manual HDR/SDR choices of those builds are kept (same storage keys).
 - Self-hosted by IP address: Lampa does not add its cache-busting parameter to such URLs, so add `?v=1.0.0` to the plugin URL.
 
-[Unreleased]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.1.0-beta.2...v1.1.0
 [1.1.0-beta.2]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.1.0-beta.1...v1.1.0-beta.2
 [1.1.0-beta.1]: https://github.com/emoorpheus/lampa-adaptive-subtitles/compare/v1.0.0...v1.1.0-beta.1
